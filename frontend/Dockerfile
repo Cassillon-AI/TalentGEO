@@ -1,5 +1,5 @@
 FROM nginx:alpine
-COPY index.html /usr/share/nginx/html/index.html
+COPY . /usr/share/nginx/html/
 RUN sed -i 's/listen       80;/listen       8080;/' /etc/nginx/conf.d/default.conf && \
     sed -i 's/listen  \[::\]:80;/listen [::]:8080;/' /etc/nginx/conf.d/default.conf
 EXPOSE 8080
