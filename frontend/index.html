@@ -907,11 +907,11 @@
     const brand = document.getElementById('input-brand').value.trim();
     const domain = document.getElementById('input-domain').value.trim();
     const careerUrl = document.getElementById('input-career-url').value.trim();    
+    const context = document.getElementById('input-context').value.trim();
 
     if (!brand) { showError('Please enter your company name.'); return; }
     if (!domain) { showError('Please enter your company URL.'); return; }
-    if (!careerUrl) { showError('Please enter your career site URL.'); return; }
-    if (!context) { showError('Please describe your company\'s GEO strategy.'); return; }
+    if (!careerUrl) { showError('Please enter your career site URL.'); return; }    
 
     const jobUrls = [
       document.getElementById('url-1').value.trim(),
