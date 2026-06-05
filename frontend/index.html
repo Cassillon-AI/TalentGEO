@@ -646,7 +646,7 @@
 
     <!-- GEO STRATEGY -->
     <div class="form-row">
-      <label>How would you describe your company's GEO strategy? *</label>
+      <label>How would you describe your company's GEO strategy?</label>
       <div class="field-hint">Share any context about your current approach to AI visibility — hiring challenges, key roles, or initiatives you're running.</div>
       <textarea id="input-context" placeholder="e.g. We're focused on technical hiring in competitive markets and want to understand how AI surfaces our roles and brand..."></textarea>
     </div>
@@ -906,8 +906,7 @@
     hideError();
     const brand = document.getElementById('input-brand').value.trim();
     const domain = document.getElementById('input-domain').value.trim();
-    const careerUrl = document.getElementById('input-career-url').value.trim();
-    const context = document.getElementById('input-context').value.trim();
+    const careerUrl = document.getElementById('input-career-url').value.trim();    
 
     if (!brand) { showError('Please enter your company name.'); return; }
     if (!domain) { showError('Please enter your company URL.'); return; }
