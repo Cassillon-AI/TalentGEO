@@ -454,6 +454,56 @@
   .data-badge.gsc { background: var(--blue-lt); color: var(--blue); }
   .data-badge.reddit { background: #ffeee6; color: #d4450c; }
 
+  /* ATS SELECTOR */
+  .ats-divider {
+    height: 1px; background: var(--surface3); margin: 4px 0 16px;
+  }
+  .ats-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .ats-title {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--ink2);
+  }
+  .ats-badge {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 10px;
+    background: var(--red-lt); color: var(--red);
+  }
+  .ats-desc {
+    font-size: 12px; color: var(--ink3); margin-bottom: 12px; line-height: 1.5;
+  }
+  .ats-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  }
+  .ats-chip {
+    display: flex; align-items: center; gap: 6px;
+    border: 1px solid var(--surface3); border-radius: 8px;
+    padding: 7px 9px; cursor: pointer;
+    background: var(--surface);
+    transition: border-color 0.12s, background 0.12s;
+    user-select: none;
+  }
+  .ats-chip:hover { border-color: var(--ink3); }
+  .ats-chip.selected { border-color: var(--teal); background: var(--teal-lt); }
+  .ats-chip input[type=checkbox] { display: none; }
+  .ats-checkmark {
+    width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
+    border: 1px solid var(--surface3); background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: transparent;
+  }
+  .ats-chip.selected .ats-checkmark {
+    background: var(--teal); border-color: var(--teal); color: #fff;
+  }
+  .ats-chip-name { font-size: 12px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ats-selected-note {
+    display: none; font-size: 11px; color: var(--teal);
+    margin-top: 10px;
+  }
+  .ats-selected-note.visible { display: block; }
+
   /* ACTION ITEMS */
   .action-item {
     display: flex; gap: 16px; padding: 16px 0;
@@ -631,6 +681,30 @@
         </label>
         <input type="url" id="url-3" placeholder="https://careers.acme.com/jobs/11111-product-manager" />
       </div>
+
+      <div class="ats-divider"></div>
+
+      <div class="ats-header">
+        <div class="ats-title">ATS Platform</div>
+        <div class="ats-badge">D5</div>
+        <span style="font-size:11px;color:var(--ink3);margin-left:auto;">optional</span>
+      </div>
+      <p class="ats-desc">Select your ATS to check your public job feed for D5 distribution coverage.</p>
+      <div class="ats-grid" id="ats-grid">
+        <label class="ats-chip" onclick="toggleATS(this)"><input type="checkbox" value="greenhouse"><div class="ats-checkmark">✓</div><span class="ats-chip-name">Greenhouse</span></label>
+        <label class="ats-chip" onclick="toggleATS(this)"><input type="checkbox" value="lever"><div class="ats-checkmark">✓</div><span class="ats-chip-name">Lever</span></label>
+        <label class="ats-chip" onclick="toggleATS(this)"><input type="checkbox" value="workday"><div class="ats-checkmark">✓</div><span class="ats-chip-name">Workday</span></label>
+        <label class="ats-chip" onclick="toggleATS(this)"><input type="checkbox" value="icims"><div class="ats-checkmark">✓</div><span class="ats-chip-name">iCIMS</span></label>
+        <label class="ats-chip" onclick="toggleATS(this)"><input type="checkbox" value="ashby"><div class="ats-checkmark">✓</div><span class="ats-chip-name">Ashby</span></label>
+        <label class="ats-chip" onclick="toggleATS(this)"><input type="checkbox" value="taleo"><div class="ats-checkmark">✓</div><span class="ats-chip-name">Taleo</span></label>
+        <label class="ats-chip" onclick="toggleATS(this)"><input type="checkbox" value="smartrecruiters"><div class="ats-checkmark">✓</div><span class="ats-chip-name">SmartRecruit.</span></label>
+        <label class="ats-chip" onclick="toggleATS(this)"><input type="checkbox" value="rippling"><div class="ats-checkmark">✓</div><span class="ats-chip-name">Rippling</span></label>
+        <label class="ats-chip" onclick="toggleATS(this)"><input type="checkbox" value="bamboohr"><div class="ats-checkmark">✓</div><span class="ats-chip-name">BambooHR</span></label>
+        <label class="ats-chip" onclick="toggleATS(this)"><input type="checkbox" value="jazzhr"><div class="ats-checkmark">✓</div><span class="ats-chip-name">JazzHR</span></label>
+        <label class="ats-chip" onclick="toggleATS(this)"><input type="checkbox" value="jobvite"><div class="ats-checkmark">✓</div><span class="ats-chip-name">Jobvite</span></label>
+        <label class="ats-chip" onclick="toggleATS(this)"><input type="checkbox" value="other"><div class="ats-checkmark">✓</div><span class="ats-chip-name">Other</span></label>
+      </div>
+      <div class="ats-selected-note" id="ats-selected-note"></div>
     </div>
 
     <!-- NAME + EMAIL -->
@@ -779,6 +853,7 @@
   let selectedTier = 'report';
   let formData = {};
   let gscToken = null;
+  let selectedATS = [];
 
   // ─── GSC OAUTH ─────────────────────────────────────────────────────────────
 
@@ -791,6 +866,21 @@
   function disconnectGSC() {
     gscToken = null;
     renderGSCState(false);
+  }
+
+  function toggleATS(el) {
+    el.classList.toggle('selected');
+    selectedATS = [...document.querySelectorAll('.ats-chip.selected')]
+      .map(c => c.querySelector('input').value);
+    const note = document.getElementById('ats-selected-note');
+    if (selectedATS.length > 0) {
+      const names = [...document.querySelectorAll('.ats-chip.selected')]
+        .map(c => c.querySelector('.ats-chip-name').textContent).join(', ');
+      note.textContent = '✓ Will check feed for: ' + names;
+      note.classList.add('visible');
+    } else {
+      note.classList.remove('visible');
+    }
   }
 
   function renderGSCState(connected) {
@@ -991,7 +1081,8 @@
           industry: formData.industry,
           context: formData.context,
           jobUrls: formData.jobUrls,
-          gscToken: gscToken || null
+          gscToken: gscToken || null,
+          selectedATS: selectedATS
         })
       });
       if (!res.ok) return null;
