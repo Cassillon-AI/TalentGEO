@@ -6,27 +6,32 @@
 <title>Talent GEO — Cassillon AI GEO Audit</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --ink: #0f0e0c;
-    --ink2: #3a3832;
-    --ink3: #7a7670;
-    --surface: #faf9f6;
-    --surface2: #f0ede6;
-    --surface3: #e4e0d8;
-    --gold: #a0722a;
-    --gold-lt: #f0e6cc;
-    --gold-dk: #7a5520;
-    --teal: #0f6e56;
-    --teal-lt: #e1f5ee;
-    --red: #a32d2d;
-    --red-lt: #fcebeb;
-    --amber: #d97706;
-    --amber-lt: #fef3c7;
-    --blue: #185fa5;
-    --blue-lt: #e6f1fb;
-    --radius: 10px;
-    --radius-lg: 16px;
-  }
+ :root {
+  --ink: #0f0e0c;
+  --ink2: #3a3832;
+  --ink3: #7a7670;
+  --surface: #faf9f6;
+  --surface2: #f0ede6;
+  --surface3: #e4e0d8;
+
+  /* BRONZE/GOLD — trim only, never status text */
+  --gold: #a0722a;        /* changed: cooler, darker bronze */
+  --gold-lt: #f0e6cc;     /* changed: matched to new gold */
+  --gold-dk: #7a5520;     /* changed: matched to new gold */
+
+  /* AMBER — "needs work" status only, never decorative */
+  --amber: #d97706;       /* changed: warmer yellow, clearly distinct from bronze */
+  --amber-lt: #fef3c7;    /* changed: matched to new amber */
+
+  --teal: #0f6e56;
+  --teal-lt: #e1f5ee;
+  --red: #a32d2d;
+  --red-lt: #fcebeb;
+  --blue: #185fa5;
+  --blue-lt: #e6f1fb;
+  --radius: 10px;
+  --radius-lg: 16px;
+}
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
   body {
