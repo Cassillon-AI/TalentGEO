@@ -635,7 +635,7 @@ app.post('/audit', async (req, res) => {
     return res.status(500).json({ error: 'API key not configured' });
   }
 
-  const { domain, brand, industry, context, jobUrls, gscToken } = req.body;
+  const { domain, brand, industry, context, jobUrls, gscToken, selectedATS } = req.body;
 
   if (!domain || !brand) {
     return res.status(400).json({ error: 'domain and brand are required' });
@@ -818,8 +818,18 @@ Set D4 dataSource to "reddit+real" and note the absence of Reddit presence in fi
 Set D4 dataSource to "inferred".`;
   }
 
-  const systemPrompt = `You are the Cassillon AI GEO Audit Engine. You apply the Cassillon AI GEO Optimization Protocol — a five-dimension framework for auditing employer brand and job posting visibility in AI-mediated candidate search.
+ const d5Context = (selectedATS && selectedATS.length > 0)
+    ? `D5 ATS CONTEXT: The user has indicated they use the following ATS platform(s): ${selectedATS.join(', ')}.
+For the D5 dimension, provide specific, actionable optimization tips tailored to these platforms. Cover:
+- Any schema or structured data requirements specific to these ATSs
+- Feed configuration settings that affect Google for Jobs eligibility
+- Known indexing quirks or limitations that impact AI/LLM visibility
+- Posting visibility or template settings candidates and crawlers commonly miss
+- Any platform-specific best practices for maximizing distribution reach
+Reference each selected ATS by name in the D5 findings. Be specific — not generic distribution advice.`
+    : `D5 CONTEXT: No ATS platform selected. Provide general distribution coverage advice for D5.`;
 
+  const systemPrompt = `You are the Cassillon AI GEO Audit Engine.
 You will receive REAL audit data collected from the client's actual career site, job posting URLs, Google Search Console, and Reddit.
 
 Do not invent findings. Base every score and finding on the real data provided.
@@ -830,7 +840,9 @@ ${d3Context}
 
 ${d4Context}
 
-Return ONLY valid JSON, no markdown, no preamble. Structure:
+${d5Context}
+
+Return ONLY valid JSON
 {
   "overallScore": 0-100,
   "scoreGrade": "Poor|Fair|Developing|Good|Strong|Excellent",
@@ -893,7 +905,9 @@ Return ONLY valid JSON, no markdown, no preamble. Structure:
       "score": 0-100,
       "colorClass": "red",
       "findings": ["finding 1", "finding 2", "finding 3"],
-      "dataSource": "inferred"
+      "dataSource": "${selectedATS && selectedATS.length > 0 ? 'ats+tips' : 'inferred'}"
+    }
+  ],
     }
   ],
   "internalActions": [
