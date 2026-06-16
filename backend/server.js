@@ -919,7 +919,15 @@ Return ONLY valid JSON
 }
 
 Provide exactly 5 internalActions and exactly 4 cassillonActions.
-Make all findings and actions specific to the real data — not generic.`;
+Make all findings and actions specific to the real data — not generic.
+
+IMPORTANT: Sort internalActions by impact/effort ratio — highest value first:
+1. Impact: High + Effort: Low  (quick wins — always first)
+2. Impact: High + Effort: Medium
+3. Impact: High + Effort: High
+4. Impact: Medium + Effort: Low
+5. Impact: Medium + Effort: Medium
+Do not sort by dimension. A D5 quick win should appear before a D1 high-effort fix.`;
 
   const userPrompt = `Audit this employer brand for GEO visibility.
 

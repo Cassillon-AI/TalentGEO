@@ -542,6 +542,7 @@
   .tag-impact-high { background: var(--gold-lt); color: var(--gold-dk); }
   .tag-impact-med { background: var(--surface2); color: var(--ink2); }
   .tag-cassillon { background: var(--ink); color: var(--gold); }
+  .tag-quickwin { background: #0a2a20; color: #2dd4a0; border: 1px solid #2dd4a0; }
 
   .cta-panel {
     background: var(--gold-lt); border: 1px solid rgba(160,114,42,0.4);
@@ -1264,19 +1265,32 @@
     const effortClass = {Low:'tag-effort-low', Medium:'tag-effort-med', High:'tag-effort-high'};
     const impactClass = {High:'tag-impact-high', Medium:'tag-impact-med'};
 
-    document.getElementById('internal-actions').innerHTML = d.internalActions.map((a, i) => `
+    const ratioRank = {
+      'High-Low': 1, 'High-Medium': 2, 'High-High': 3,
+      'Medium-Low': 4, 'Medium-Medium': 5, 'Medium-High': 6
+    };
+    const sortedActions = [...d.internalActions].sort((a, b) => {
+      const ra = ratioRank[`${a.impact}-${a.effort}`] || 9;
+      const rb = ratioRank[`${b.impact}-${b.effort}`] || 9;
+      return ra - rb;
+    });
+
+    document.getElementById('internal-actions').innerHTML = sortedActions.map((a, i) => {
+      const isQuickWin = a.impact === 'High' && a.effort === 'Low';
       <div class="action-item">
         <div class="action-num">${i+1}</div>
         <div class="action-body">
           <div class="action-title">${a.title}</div>
           <div class="action-desc">${a.description}</div>
           <div class="action-meta">
+            ${isQuickWin ? '<span class="tag tag-quickwin">⚡ Quick Win</span>' : ''}
             <span class="tag ${effortClass[a.effort]||''}">Effort: ${a.effort}</span>
             <span class="tag ${impactClass[a.impact]||''}">Impact: ${a.impact}</span>
             ${a.dimension ? `<span class="tag" style="background:var(--surface2);color:var(--ink2)">${a.dimension}</span>` : ''}
           </div>
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     document.getElementById('cassillon-actions').innerHTML = d.cassillonActions.map((a, i) => `
       <div class="action-item">
