@@ -1202,7 +1202,7 @@
   }
 
   function dataBadge(source) {
-    if (!source || source === 'inferred') return '<span class="data-badge inferred">◌ Inferred</span>';
+    if (!source || source === 'inferred') return '<span class="data-badge inferred">◌ Inferred — No Live Data</span>';
     if (source === 'gsc+real') return '<span class="data-badge gsc">● GSC + Live</span>';
     if (source === 'reddit+real') return '<span class="data-badge reddit">● Reddit Live</span>';
     if (source === 'ats+tips') return '<span class="data-badge real">● ATS Tips</span>';
