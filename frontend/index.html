@@ -834,7 +834,12 @@
     <div class="score-panel fade-up">
       <div class="score-row">
         <div class="score-num" id="report-score">—</div>
-        <div class="score-grade" id="score-grade"></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="score-grade" id="score-grade"></div>
+          <div class="tooltip-wrap" data-tooltip="Composite score weighted across 5 dimensions: D1 Schema Integrity (25%), D2 Career Site Hygiene (20%), D3 Job Posting Content (20%), D4 Employer Brand Signals (20%), D5 Distribution Coverage (15%). Scores are based on live data fetched from your career site, job postings, and public signals. Tiers: 0–25 Critical · 26–50 Developing · 51–75 Established · 76–100 Leading." style="cursor:help;">
+            <span style="font-size:13px;color:var(--ink3);border:1px solid var(--ink3);border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;">ⓘ</span>
+          </div>
+        </div>
       </div>
       <div class="score-bar-track">
         <div class="score-bar-fill" id="score-bar"></div>
