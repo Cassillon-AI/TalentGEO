@@ -1277,7 +1277,7 @@
 
     document.getElementById('internal-actions').innerHTML = sortedActions.map((a, i) => {
       const isQuickWin = a.impact === 'High' && a.effort === 'Low';
-      <div class="action-item">
+      return `<div class="action-item">
         <div class="action-num">${i+1}</div>
         <div class="action-body">
           <div class="action-title">${a.title}</div>
