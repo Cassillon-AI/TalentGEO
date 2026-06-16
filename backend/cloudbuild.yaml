@@ -16,7 +16,7 @@ steps:
       - --region=us-central1
       - --platform=managed
       - --allow-unauthenticated
-      - --set-secrets=ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest
+      - --set-secrets=ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest
       - --memory=512Mi
       - --timeout=120
 
