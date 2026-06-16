@@ -561,6 +561,38 @@
     to { opacity: 1; transform: translateY(0); }
   }
   .fade-up { animation: fadeUp 0.4s ease forwards; }
+
+  /* TOOLTIPS */
+  .tooltip-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: help;
+  }
+  .tooltip-wrap::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    background: #1a2d4a;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.6;
+    text-transform: none;
+    letter-spacing: 0;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--surface3);
+    width: 260px;
+    white-space: normal;
+    z-index: 200;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .tooltip-wrap:hover::after { opacity: 1; }
 </style>
 </head>
 <body>
@@ -1118,6 +1150,57 @@
 
   // ─── RENDER REPORT ─────────────────────────────────────────────────────────
 
+  const signalTooltips = {
+    'Google for Jobs': {
+      ok:   'Your job postings are indexed and appearing in Google for Jobs. Candidates searching on Google can find your roles directly in search results with rich previews.',
+      warn: 'Partial visibility in Google for Jobs. Some postings are missing required JobPosting schema fields (e.g. salary, employment type, or valid dates). A full result would show all active roles with complete rich result previews.',
+      fail: 'No Google for Jobs presence detected. Your postings are likely missing JobPosting JSON-LD schema markup entirely. A full result would have every active job indexed with title, location, salary, and company details visible in Google Search.',
+      na:   'Google for Jobs status could not be checked — your career site may be blocking crawlers or the URL was unreachable during the audit.'
+    },
+    'LinkedIn Jobs': {
+      ok:   'Your jobs are actively distributed on LinkedIn. Candidates and AI sourcing tools on LinkedIn can discover your open roles.',
+      warn: 'LinkedIn presence is partial. Your company page or job listings may be incomplete, inconsistent, or not synced via an ATS feed. A full result would include a verified company page and all active jobs distributed through a live feed.',
+      fail: 'No LinkedIn job distribution detected. Your roles are either not posted on LinkedIn or not connected via an ATS feed. A full result would have all active jobs syncing automatically.',
+      na:   'LinkedIn status could not be verified during this audit.'
+    },
+    'Glassdoor': {
+      ok:   'Your employer brand is active on Glassdoor with reviews, ratings, and job listings visible to candidates and AI systems that cite Glassdoor data.',
+      warn: 'Partial Glassdoor presence. Your profile may be unclaimed, have sparse reviews, or lack updated employer branding. A full result would include a claimed profile with consistent branding, active job listings, and employer responses.',
+      fail: 'No meaningful Glassdoor presence detected. AI systems that use Glassdoor as a signal source will not surface your employer brand. A full result would include a claimed, complete profile.',
+      na:   'Glassdoor status could not be verified during this audit.'
+    },
+    'Indeed ATS Feed': {
+      ok:   'Your ATS is actively feeding jobs to Indeed. Postings are indexed and discoverable by candidates and AI aggregators that pull from Indeed.',
+      warn: 'ATS feed to Indeed is partially connected. Some jobs may be missing, delayed, or lacking metadata. A full result would have all active roles syncing in real time with complete job details.',
+      fail: 'No Indeed ATS feed detected. Your jobs are not being automatically distributed to Indeed, limiting reach and AI discoverability. A full result would have a live, verified ATS feed active.',
+      na:   'Indeed ATS feed status could not be checked for this audit.'
+    },
+    'Schema.org JobPosting': {
+      ok:   'Valid Schema.org JobPosting structured data is present on your job pages. Search engines and AI crawlers can parse and cite your job details accurately.',
+      warn: 'Partial schema detected. JobPosting markup is present but missing required or recommended fields (e.g. baseSalary, validThrough, employmentType). A full result would have complete, valid schema on every job posting.',
+      fail: 'No Schema.org JobPosting markup found. Without structured data, AI systems and search engines cannot reliably parse your job content. A full result would have valid JSON-LD on every job page.',
+      na:   'Schema status could not be checked — job posting URLs may not have been provided or were unreachable.'
+    },
+    'Bing Career Search': {
+      ok:   'Your jobs are indexed and visible in Bing career search results. AI tools that use Bing as a data source can surface your roles.',
+      warn: 'Partial Bing presence. Your career site or job schema may not be fully indexed. A full result would show complete job listings indexed in Bing with structured data visible.',
+      fail: 'No Bing career search presence detected. Your roles are not appearing in Bing job results, reducing reach across AI tools that rely on Bing indexing.',
+      na:   'Bing career search status is not applicable or could not be verified for this audit.'
+    }
+  };
+
+  const genericTooltip = {
+    ok:   'This platform shows an active, confirmed presence. Your brand or jobs are visible here.',
+    warn: 'Partial presence detected. Some signals are missing or misconfigured on this platform. A full result would show complete, consistent data.',
+    fail: 'Not detected on this platform. This signal is absent from your GEO profile and may reduce AI discoverability.',
+    na:   'Status unavailable for this platform — it could not be checked during this audit or is not applicable.'
+  };
+
+  function getSignalTooltip(platform, status) {
+    const map = signalTooltips[platform] || genericTooltip;
+    return map[status] || genericTooltip[status] || '';
+  }
+
   function dataBadge(source) {
     if (!source || source === 'inferred') return '<span class="data-badge inferred">◌ Inferred</span>';
     if (source === 'gsc+real') return '<span class="data-badge gsc">● GSC + Live</span>';
@@ -1146,7 +1229,9 @@
     document.getElementById('geo-signals').innerHTML = d.geoProfile.signals.map(s => `
       <div class="signal-row">
         <div class="signal-name">${s.platform}</div>
-        <div class="signal-status ${statusClass[s.status]}">${statusLabel[s.status]}</div>
+        <div class="tooltip-wrap" data-tooltip="${getSignalTooltip(s.platform, s.status)}">
+          <div class="signal-status ${statusClass[s.status]}">${statusLabel[s.status]}</div>
+        </div>
       </div>`).join('');
 
     document.getElementById('geo-narrative').innerHTML = `<p>${d.geoProfile.narrative}</p>`;
