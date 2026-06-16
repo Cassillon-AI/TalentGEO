@@ -859,7 +859,9 @@
 </div>
 
 <script>
-  const BACKEND_URL = 'https://talentgeo-backend-360027703478.us-central1.run.app';
+  const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8080'
+    : 'https://talentgeo-backend-360027703478.us-central1.run.app';
 
   let selectedTier = 'report';
   let formData = {};
