@@ -1,0 +1,24 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/talentgeo-backend', '.']
+    dir: 'backend'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/talentgeo-backend']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - talentgeo-backend
+      - --image=gcr.io/$PROJECT_ID/talentgeo-backend
+      - --region=us-central1
+      - --platform=managed
+      - --allow-unauthenticated
+      - --set-secrets=ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest
+      - --memory=512Mi
+      - --timeout=120
+
+options:
+  logging: CLOUD_LOGGING_ONLY
