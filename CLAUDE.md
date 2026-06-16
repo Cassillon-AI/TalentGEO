@@ -53,7 +53,9 @@ Dimension weights: D1 25%, D2 20%, D3 20%, D4 20%, D5 15%.
 - All Claude prompts use claude-sonnet-4-6 with max_tokens: 4000.
 - Firestore collections: users, audits, benchmarks (pending).
 - Admin routes prefixed /admin — protect with middleware before exposing.
-- Environment: GCP Project ID = [YOUR_PROJECT_ID]
+- Environment: GCP Project ID = basic-advantage-483301-b4
+- Cloud Build service account: 360027703478-compute@developer.gserviceaccount.com
+- Container images: gcr.io/basic-advantage-483301-b4/talentgeo-backend and talentgeo-frontend
 
 ## What NOT to Touch
 - The five-dimension audit prompt structure — changes need Jonathon review.
