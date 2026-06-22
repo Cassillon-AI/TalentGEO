@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
+const db = require('./db');
+const { upsertCompany, saveAudit } = require('./auditRepository');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -19,6 +21,16 @@ app.use(express.json());
 
 app.get('/', (req, res) => {
   res.json({ status: 'ok', service: 'Talent GEO Audit API v5' });
+});
+
+app.get('/health', async (req, res) => {
+  try {
+    const result = await db.query('SELECT NOW() AS time');
+    res.json({ status: 'ok', db: 'connected', time: result.rows[0].time });
+  } catch (err) {
+    console.error('Health check DB error:', err.message);
+    res.status(503).json({ status: 'error', db: 'unavailable', error: err.message });
+  }
 });
 
 // ─── OAUTH: STEP 1 — REDIRECT USER TO GOOGLE ─────────────────────────────────
@@ -966,7 +978,24 @@ ${JSON.stringify(realDataSummary, null, 2)}`;
     const clean = text.replace(/```json|```/g, '').trim();
     const report = JSON.parse(clean);
 
-    res.json({ success: true, report, auditData: realDataSummary });
+    // Persist audit to database (non-blocking — don't fail the response if DB write fails)
+    try {
+      const companyId = await upsertCompany({
+        name: brand,
+        domain: baseUrl,
+        industry: industry || null,
+      });
+      const auditId = await saveAudit({
+        companyId,
+        report,
+        auditData: realDataSummary,
+        requestBody: req.body,
+      });
+      res.json({ success: true, report, auditData: realDataSummary, auditId });
+    } catch (dbErr) {
+      console.error('DB persist error (audit still returned):', dbErr.message);
+      res.json({ success: true, report, auditData: realDataSummary, auditId: null });
+    }
 
   } catch (err) {
     console.error('Audit error:', err);

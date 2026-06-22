@@ -3,5 +3,7 @@ WORKDIR /app
 COPY package.json .
 RUN npm install --production
 COPY server.js .
+COPY db.js .
+COPY auditRepository.js .
 EXPOSE 8080
 CMD ["node", "server.js"]
