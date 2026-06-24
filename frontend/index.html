@@ -704,6 +704,22 @@
         </label>
         <input type="url" id="url-3" placeholder="https://careers.acme.com/jobs/11111-product-manager" />
       </div>
+      <div class="url-field">
+        <label>
+          <span class="url-dot" style="background:#7c5cbf"></span>
+          Job Description #4
+          <span style="color:var(--ink3);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;margin-left:4px;">— optional</span>
+        </label>
+        <input type="url" id="url-4" placeholder="https://careers.acme.com/jobs/22222-data-engineer" />
+      </div>
+      <div class="url-field">
+        <label>
+          <span class="url-dot" style="background:#c2692b"></span>
+          Job Description #5
+          <span style="color:var(--ink3);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;margin-left:4px;">— optional</span>
+        </label>
+        <input type="url" id="url-5" placeholder="https://careers.acme.com/jobs/33333-account-executive" />
+      </div>
 
       <div class="ats-divider"></div>
 
@@ -965,7 +981,9 @@
     const jobUrls = [
       document.getElementById('url-1').value.trim(),
       document.getElementById('url-2').value.trim(),
-      document.getElementById('url-3').value.trim()
+      document.getElementById('url-3').value.trim(),
+      document.getElementById('url-4').value.trim(),
+      document.getElementById('url-5').value.trim()
     ].filter(u => u.length > 0);
 
     if (jobUrls.length === 0) { showError('Please enter at least one job posting URL.'); return; }
@@ -1209,7 +1227,7 @@
   // ─── RESET ─────────────────────────────────────────────────────────────────
 
   function resetApp() {
-    ['input-brand','input-domain','input-career-url','input-hq','input-name','input-email','input-context','url-1','url-2','url-3'].forEach(id => {
+    ['input-brand','input-domain','input-career-url','input-hq','input-name','input-email','input-context','url-1','url-2','url-3','url-4','url-5'].forEach(id => {
       document.getElementById(id).value = '';
     });
     document.getElementById('input-industry').value = '';

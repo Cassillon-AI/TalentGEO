@@ -844,7 +844,12 @@ ${d2CareerScore ? `CAREER SITE SUB-PROTOCOL: ${careerSiteFetchUrl}
 D2 composite score (${d2JDAvgScore !== null && d2CareerScore ? '60% JD + 40% career site' : d2JDAvgScore !== null ? 'JD only — career site unavailable' : 'career site only — no JD URLs'}): ${d2CompositeScore}/100.
 Use ${d2CompositeScore} as the D2 score.
 Reference the UTP 7-step fix methodology in D2 recommendations when any JD totalScore < 25.
-Call out specific missing metadata fields and sections by name in D2 findings.`
+Call out specific missing metadata fields and sections by name in D2 findings.
+
+UTP Non-Negotiables — apply these principles explicitly in D2 findings and recommendations:
+1. Optimization ≠ Templating: Fix structure and fill metadata gaps while preserving the company's brand voice. Never recommend generic templates.
+2. Metadata is non-negotiable: Both the visible metadata block AND embedded JSON-LD are required for LLM retrievability. Surface gaps in both layers.
+3. Candidate self-assessment is a quality metric: If candidates cannot determine from the JD whether they are a fit, the JD has failed — regardless of other scores.`
     : `D2 DATA: No job URLs and career site could not be fetched. Score D2 as inferred from domain/brand knowledge only.`;
 
 
