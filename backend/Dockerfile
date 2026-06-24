@@ -5,5 +5,6 @@ RUN npm install --production
 COPY server.js .
 COPY db.js .
 COPY auditRepository.js .
+COPY tierClassifier.js .
 EXPOSE 8080
 CMD ["node", "server.js"]

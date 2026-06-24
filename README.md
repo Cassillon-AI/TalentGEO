@@ -24,6 +24,34 @@ Users enter their company domain, brand name, industry, and up to three job post
 | D4 | Employer Brand Signal Strength | Presence across AI-indexed platforms |
 | D5 | Distribution & Monitoring | Job board reach and tracking setup |
 
+Dimension weights and grade thresholds are tier-aware (T1–T4). See [Tier Classification](#tier-classification) below.
+
+---
+
+## Tier Classification
+
+Every audit assigns a company tier using PDL (People Data Labs) firmographic data:
+
+| Tier | Label | Headcount | Revenue |
+|------|-------|-----------|---------|
+| T1 | Startup | < 100 | < $50M |
+| T2 | Growth | 100–999 | $50M–$1B |
+| T3 | Mid-Market | 1,000–4,999 | $1B–$2B |
+| T4 | Enterprise | 5,000+ | $2B+ |
+
+**Assignment paths:**
+- **System-assigned** — PDL is source of truth (headcount primary, revenue secondary)
+- **Employer-declared** — user checks "Is this your company?" and selects a tier; PDL still runs for validation. Discrepancies are flagged and stored.
+
+**Grade thresholds by tier:**
+
+| Tier | Good | Excellent |
+|------|------|-----------|
+| T1 | 50+ | 65+ |
+| T2 | 65+ | 80+ |
+| T3 | 70+ | 85+ |
+| T4 | 75+ | 90+ |
+
 ---
 
 ## Repo Structure
@@ -31,11 +59,15 @@ Users enter their company domain, brand name, industry, and up to three job post
 ```
 TalentGEO/
 ├── frontend/
-│   └── index.html        # Single-page app (HTML/CSS/JS)
+│   └── index.html          # Single-page app (HTML/CSS/JS)
 ├── backend/
-│   ├── server.js         # Express proxy + audit engine
+│   ├── server.js           # Express server + audit engine
+│   ├── auditRepository.js  # Database persistence layer
+│   ├── tierClassifier.js   # PDL-based tier assignment
+│   ├── db.js               # Postgres connection pool
+│   ├── schema.sql          # Full database schema (source of truth)
 │   ├── package.json
-│   └── Dockerfile        # Node.js container for Cloud Run
+│   └── Dockerfile          # Node.js container for Cloud Run
 └── README.md
 ```
 
@@ -47,25 +79,31 @@ TalentGEO/
 User Browser
     │
     ▼
-Firebase Hosting  ←─ frontend/index.html (static)
+Cloud Run (frontend)  ←─ frontend/index.html (static, served via nginx)
     │
     │  POST /audit
     ▼
-Cloud Run (backend)  ←─ Holds ANTHROPIC_API_KEY via Secret Manager
+Cloud Run (backend)  ←─ Secrets via Secret Manager
     │
-    │  Fetches live data: schema, robots.txt, sitemap, job pages
+    ├── Fetches live data: schema, robots.txt, sitemap, job pages
+    ├── Calls PDL Company Enrich API (tier classification)
     │
     ▼
 Anthropic API (Claude Sonnet)
     │
     ▼
 Structured JSON report  ──▶  rendered in browser
+    │
+    ▼
+Cloud SQL (Postgres 15)  ←─ audits, tier_classifications, companies
 ```
 
-- **Frontend:** Static HTML/CSS/JS served from Cloud Run (nginx) or Firebase Hosting
-- **Backend:** Node.js/Express on Cloud Run, scales to zero when idle
+- **Frontend:** Static HTML/CSS/JS served from Cloud Run (`talentgeo-frontend`)
+- **Backend:** Node.js/Express on Cloud Run (`talentgeo-backend`), scales to zero when idle
 - **AI Engine:** Claude Sonnet via Anthropic API — not a chatbot, the scoring/analysis engine
-- **Secrets:** Anthropic API key stored in GCP Secret Manager, injected at runtime
+- **Data Enrichment:** PDL Company Enrich API for firmographic tier classification
+- **Database:** Cloud SQL (Postgres 15, `talentgeo-db`, `us-central1`)
+- **Secrets:** API keys and DB password stored in GCP Secret Manager, injected at runtime
 
 ---
 
@@ -75,13 +113,18 @@ Structured JSON report  ──▶  rendered in browser
 
 - Node.js 18+
 - An Anthropic API key
+- A PDL API key
+- A Postgres database (local or Cloud SQL via proxy)
 
 ### Run the backend
 
 ```bash
 cd backend
 npm install
-ANTHROPIC_API_KEY=sk-ant-your-key-here node server.js
+ANTHROPIC_API_KEY=sk-ant-your-key-here \
+PDL_API_KEY=your-pdl-key-here \
+DATABASE_URL=postgresql://talentgeo_app:PASSWORD@localhost:5432/talentgeo \
+node server.js
 ```
 
 The backend runs on `http://localhost:8080` by default.
@@ -100,58 +143,32 @@ Make sure the `BACKEND_URL` constant near the bottom of `index.html` points to y
 
 ## Deployment (Google Cloud)
 
-The app is deployed on GCP using Cloud Run for both frontend and backend, with continuous deployment triggered from commits to `main`.
-
-### First-time setup
-
-**1. Enable GCP APIs**
-
-```bash
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com secretmanager.googleapis.com
-```
-
-**2. Store the Anthropic API key**
-
-```bash
-echo -n "sk-ant-YOUR_KEY_HERE" | \
-  gcloud secrets create ANTHROPIC_API_KEY --data-file=- --replication-policy="automatic"
-```
-
-**3. Deploy the backend**
+### Deploy the backend
 
 ```bash
 cd backend
 gcloud run deploy talentgeo-backend \
   --source . \
   --region us-central1 \
-  --platform managed \
+  --project basic-advantage-483301-b4 \
+  --add-cloudsql-instances basic-advantage-483301-b4:us-central1:talentgeo-db \
+  --set-secrets="ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,DB_PASSWORD=talentgeo-db-password:latest,PDL_API_KEY=PDL_API_KEY:latest" \
+  --set-env-vars="CLOUD_SQL_CONNECTION_NAME=basic-advantage-483301-b4:us-central1:talentgeo-db,DB_USER=talentgeo_app,DB_NAME=talentgeo" \
   --allow-unauthenticated \
-  --set-secrets="ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest" \
   --memory 512Mi \
   --timeout 120
 ```
 
-Copy the service URL from the output (e.g. `https://talentgeo-backend-XXXXXXXX-uc.a.run.app`).
-
-**4. Update the frontend**
-
-In `frontend/index.html`, set `BACKEND_URL` to the Cloud Run URL from step 3.
-
-**5. Deploy the frontend**
+### Deploy the frontend
 
 ```bash
 cd frontend
 gcloud run deploy talentgeo-frontend \
   --source . \
   --region us-central1 \
-  --platform managed \
-  --allow-unauthenticated \
-  --memory 256Mi
+  --project basic-advantage-483301-b4 \
+  --allow-unauthenticated
 ```
-
-### Continuous deployment
-
-Cloud Build triggers are configured for both services. Every commit to `main` automatically rebuilds and redeploys. Build logs are visible in **Cloud Console → Cloud Build → History**.
 
 ---
 
@@ -159,10 +176,8 @@ Cloud Build triggers are configured for both services. Every commit to `main` au
 
 | Service | URL |
 |---------|-----|
-| Frontend | `https://talentgeo-frontend-XXXXXXXX-uc.a.run.app` |
+| Frontend | `https://talentgeo-frontend-360027703478.us-central1.run.app` |
 | Backend | `https://talentgeo-backend-360027703478.us-central1.run.app` |
-
-> Update this table with your actual URLs after deployment.
 
 ---
 
@@ -171,7 +186,27 @@ Cloud Build triggers are configured for both services. Every commit to `main` au
 | Variable | Where Set | Description |
 |----------|-----------|-------------|
 | `ANTHROPIC_API_KEY` | GCP Secret Manager | Claude API key |
+| `PDL_API_KEY` | GCP Secret Manager | People Data Labs API key |
+| `DB_PASSWORD` | GCP Secret Manager | Cloud SQL app user password |
+| `CLOUD_SQL_CONNECTION_NAME` | Cloud Run env var | Cloud SQL instance connection string |
+| `DB_USER` | Cloud Run env var | Postgres app user (`talentgeo_app`) |
+| `DB_NAME` | Cloud Run env var | Postgres database name (`talentgeo`) |
 | `PORT` | Cloud Run (auto) | HTTP port, defaults to 8080 |
+
+---
+
+## Database
+
+Cloud SQL (Postgres 15) instance `talentgeo-db` in `us-central1`. Key tables:
+
+| Table | Purpose |
+|-------|---------|
+| `companies` | One row per domain |
+| `audits` | Full audit results including composite score and dimension scores |
+| `tier_classifications` | Tier history per company with PDL signals and discrepancy flags |
+| `tier_weights` | Dimension weight seeds by tier (T1–T4) |
+
+Schema source of truth: `backend/schema.sql`.
 
 ---
 

@@ -30,7 +30,7 @@ async function upsertCompany({ name, domain, industry }) {
 // ─── SAVE AUDIT ──────────────────────────────────────────────────────────────
 // Persists a completed audit and all dimension detail rows.
 // Returns the new audit UUID.
-async function saveAudit({ companyId, report, auditData, requestBody }) {
+async function saveAudit({ companyId, report, auditData, requestBody, tierResult }) {
   const client = await db.getClient();
 
   try {
@@ -49,8 +49,7 @@ async function saveAudit({ companyId, report, auditData, requestBody }) {
     const d4Score = d4?.score ?? null;
     const d5Score = d5?.score ?? null;
 
-    // Tier defaults to 1 until PDL integration provides real classification
-    const tier = 1;
+    const tier = tierResult?.tier ?? 2;
     const weights = TIER_WEIGHTS[tier];
 
     // Composite score using tier-aware weights
@@ -69,11 +68,46 @@ async function saveAudit({ companyId, report, auditData, requestBody }) {
     const compositeCapped = catastrophicD1 && compositeScore > 30;
     if (compositeCapped) compositeScore = 30;
 
+    const GRADE_THRESHOLDS = {
+      1: { excellent: 65, good: 50 },
+      2: { excellent: 80, good: 65 },
+      3: { excellent: 85, good: 70 },
+      4: { excellent: 90, good: 75 },
+    };
+    const thresholds = GRADE_THRESHOLDS[tier] ?? GRADE_THRESHOLDS[2];
     const gradeLabel = compositeScore === null ? null
-      : compositeScore >= 80 ? 'Excellent'
-      : compositeScore >= 60 ? 'Good'
+      : compositeScore >= thresholds.excellent ? 'Excellent'
+      : compositeScore >= thresholds.good ? 'Good'
       : compositeScore >= 40 ? 'Average'
       : 'Needs Improvement';
+
+    // ── tier_classifications row ──────────────────────────────────────────────
+    // Close any existing active classification before inserting the new one.
+    await client.query(
+      `UPDATE tier_classifications
+       SET effective_to = NOW()
+       WHERE company_id = $1 AND effective_to IS NULL`,
+      [companyId]
+    );
+
+    await client.query(
+      `INSERT INTO tier_classifications (
+         company_id, tier, assignment_method,
+         pdl_headcount, pdl_revenue_usd, funding_stage,
+         confidence, discrepancy, discrepancy_detail, effective_from
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())`,
+      [
+        companyId,
+        tier,
+        tierResult?.assignment_method ?? 'system',
+        tierResult?.pdl_headcount ?? null,
+        tierResult?.pdl_revenue_usd ?? null,
+        tierResult?.funding_stage ?? null,
+        tierResult?.confidence ?? 'low',
+        tierResult?.discrepancy ?? false,
+        tierResult?.discrepancy_detail ?? null,
+      ]
+    );
 
     // ── audits row ────────────────────────────────────────────────────────────
     const auditResult = await client.query(
@@ -85,15 +119,17 @@ async function saveAudit({ companyId, report, auditData, requestBody }) {
          data_completeness_pct, score_status,
          claude_model, data_sources_used
        ) VALUES (
-         $1, 'customer', 'employer', $2, $3,
-         $4, $5,
-         $6, $7, $8, $9, $10,
-         $11, $12,
-         $13, 'final',
-         'claude-sonnet-4-6', $14
+         $1, 'customer', $2, $3, $4,
+         $5, $6,
+         $7, $8, $9, $10, $11,
+         $12, $13,
+         $14, 'final',
+         'claude-sonnet-4-6', $15
        ) RETURNING id`,
       [
-        companyId, tier, WEIGHTS_VERSION_ID,
+        companyId,
+        tierResult?.assignment_method === 'employer_declared' ? 'employer' : 'cassillon',
+        tier, WEIGHTS_VERSION_ID,
         compositeScore, gradeLabel,
         d1Score, d2Score, d3Score, d4Score, d5Score,
         catastrophicD1, compositeCapped,

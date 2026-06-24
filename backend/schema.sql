@@ -86,6 +86,8 @@ CREATE TABLE tier_classifications (
   funding_stage     VARCHAR(30),               -- 'seed', 'series-a', 'series-b', etc.
   confidence        VARCHAR(10)  NOT NULL
                     CHECK (confidence IN ('high','medium','low')),
+  discrepancy       BOOLEAN      NOT NULL DEFAULT FALSE,
+  discrepancy_detail TEXT,
   effective_from    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   effective_to      TIMESTAMPTZ,               -- NULL = currently active
   created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW()

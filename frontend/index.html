@@ -563,6 +563,51 @@
   }
   .fade-up { animation: fadeUp 0.4s ease forwards; }
 
+  /* OWN COMPANY / TIER DECLARATION */
+  .own-company-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px;
+    background: var(--surface2); border: 1px solid var(--surface3);
+    border-radius: var(--radius); margin-bottom: 14px;
+    cursor: pointer; user-select: none;
+  }
+  .own-company-row:hover { border-color: var(--gold); }
+  .own-company-row.checked { border-color: var(--gold); background: var(--gold-lt); }
+  .own-company-checkbox {
+    width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
+    border: 1.5px solid var(--surface3); background: var(--surface-input);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: transparent; transition: all 0.15s;
+  }
+  .own-company-row.checked .own-company-checkbox {
+    background: var(--gold); border-color: var(--gold); color: #fff;
+  }
+  .own-company-label { font-size: 14px; color: var(--ink); flex: 1; }
+  .own-company-hint { font-size: 12px; color: var(--ink3); margin-top: 1px; }
+
+  .tier-declaration {
+    display: none;
+    background: var(--gold-lt); border: 1px solid rgba(160,114,42,0.35);
+    border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px;
+  }
+  .tier-declaration.visible { display: block; }
+  .tier-declaration label {
+    display: block; font-size: 12px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--gold-dk); margin-bottom: 8px;
+  }
+  .tier-declaration select {
+    width: 100%; background: var(--surface-input);
+    border: 1px solid rgba(160,114,42,0.4); border-radius: 8px;
+    padding: 10px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 14px; color: var(--ink); outline: none;
+  }
+  .tier-declaration select:focus { border-color: var(--gold); }
+  .tier-declaration-hint {
+    font-size: 12px; color: var(--gold-dk); opacity: 0.75;
+    margin-top: 8px; line-height: 1.5;
+  }
+
   /* TOOLTIPS */
   .tooltip-wrap {
     position: relative;
@@ -770,6 +815,27 @@
       <textarea id="input-context" placeholder="e.g. We're focused on technical hiring in competitive markets and want to understand how AI surfaces our roles and brand..."></textarea>
     </div>
 
+    <!-- IS THIS YOUR COMPANY -->
+    <div class="own-company-row" id="own-company-row" onclick="toggleOwnCompany()">
+      <div class="own-company-checkbox" id="own-company-checkbox">✓</div>
+      <div>
+        <div class="own-company-label">This is my company</div>
+        <div class="own-company-hint">Check this if you represent the company being audited</div>
+      </div>
+    </div>
+
+    <div class="tier-declaration" id="tier-declaration">
+      <label>Company Tier <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.75;">— optional</span></label>
+      <select id="input-declared-tier">
+        <option value="">Let the system classify automatically</option>
+        <option value="1">T1 — Startup / Early-Stage (&lt;100 employees, &lt;$50M revenue)</option>
+        <option value="2">T2 — Growth-Stage (100–1,000 employees, $50M–$1B revenue)</option>
+        <option value="3">T3 — Established Mid-Market (1,000–5,000 employees, $1B–$2B revenue)</option>
+        <option value="4">T4 — Enterprise (5,000+ employees, $2B+ revenue)</option>
+      </select>
+      <div class="tier-declaration-hint">Your tier determines scoring weights and benchmarks. Leave blank to auto-classify from public data.</div>
+    </div>
+
     <div class="error-msg" id="error-msg"></div>
 
     <button class="btn-primary" id="audit-btn" onclick="startAudit()">
@@ -905,6 +971,7 @@
   let formData = {};
   let gscToken = null;
   let selectedATS = [];
+  let isOwnCompany = false;
 
   // ─── GSC OAUTH ─────────────────────────────────────────────────────────────
 
@@ -983,7 +1050,9 @@
       url1: document.getElementById('url-1').value,
       url2: document.getElementById('url-2').value,
       url3: document.getElementById('url-3').value,
-      tier: selectedTier
+      tier: selectedTier,
+      isOwnCompany,
+      declaredTier: document.getElementById('input-declared-tier').value
     };
     sessionStorage.setItem('tgeo_form', JSON.stringify(state));
   }
@@ -1004,7 +1073,9 @@
       if (s.url1)      document.getElementById('url-1').value = s.url1;
       if (s.url2)      document.getElementById('url-2').value = s.url2;
       if (s.url3)      document.getElementById('url-3').value = s.url3;
-      if (s.tier)      selectTier(s.tier);
+      if (s.tier)        selectTier(s.tier);
+      if (s.isOwnCompany && !isOwnCompany) toggleOwnCompany();
+      if (s.declaredTier) document.getElementById('input-declared-tier').value = s.declaredTier;
       sessionStorage.removeItem('tgeo_form');
     } catch(e) { /* ignore */ }
   }
@@ -1027,6 +1098,15 @@
       showError(`Google Search Console connection failed (${reason}). You can still run the audit without GSC data.`);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+  }
+
+  // ─── OWN COMPANY TOGGLE ───────────────────────────────────────────────────
+
+  function toggleOwnCompany() {
+    isOwnCompany = !isOwnCompany;
+    document.getElementById('own-company-row').classList.toggle('checked', isOwnCompany);
+    document.getElementById('tier-declaration').classList.toggle('visible', isOwnCompany);
+    if (!isOwnCompany) document.getElementById('input-declared-tier').value = '';
   }
 
   // ─── TIER / FORM ──────────────────────────────────────────────────────────
@@ -1142,7 +1222,9 @@
           context: formData.context,
           jobUrls: formData.jobUrls,
           gscToken: gscToken || null,
-          selectedATS: selectedATS
+          selectedATS: selectedATS,
+          isOwnCompany: isOwnCompany,
+          declaredTier: document.getElementById('input-declared-tier').value || null
         })
       });
       if (!res.ok) return null;
@@ -1321,6 +1403,8 @@
       document.getElementById(id).value = '';
     });
     document.getElementById('input-industry').value = '';
+    document.getElementById('input-declared-tier').value = '';
+    if (isOwnCompany) toggleOwnCompany();
     document.querySelectorAll('.audit-step').forEach(s => s.classList.remove('active','done'));
     for (let i = 0; i < 5; i++) document.getElementById(`step-icon-${i}`).textContent = i + 1;
     document.getElementById('step-icon-5').textContent = '✦';

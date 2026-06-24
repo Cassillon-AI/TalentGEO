@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TalentGEO — Report UI Mockup (Progressive Disclosure)</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink: #f0f2f5; --ink2: #d8d9dc; --ink3: #6a7a90;
+  --surface: #0b1526; --surface2: #0d1f3c; --surface3: #1e3a6e;
+  --gold: #a0722a; --gold-lt: #1a2d50; --gold-dk: #c8a060;
+  --teal: #2dd4a0; --teal-lt: #0a2a20;
+  --red: #f87171; --red-lt: #2a0f0f;
+  --blue: #4a90d9; --blue-lt: #0d1f3c;
+  --amber: #d97706; --amber-lt: #2a1f08;
+  --purple: #9d97e8; --purple-lt: #1a1640;
+  --radius: 10px; --radius-lg: 16px;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: #060e1a;
+  color: var(--ink);
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* ── MOCKUP BANNER ── */
+.mockup-banner {
+  background: var(--gold-lt);
+  border-bottom: 1px solid rgba(160,114,42,0.4);
+  padding: 10px 2rem;
+  display: flex; align-items: center; gap: 12px;
+  font-size: 12px; color: var(--gold-dk);
+}
+.mockup-banner strong { font-weight: 600; }
+.mockup-banner span { color: var(--ink3); }
+
+/* ── NAV ── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--surface);
+  border-bottom: 1px solid var(--surface3);
+  padding: 0 2rem; height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo-mark {
+  width: 30px; height: 30px;
+  background: var(--ink); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--gold); font-family: 'Instrument Serif', serif; font-size: 17px;
+}
+.logo-text { font-size: 14px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink); }
+.logo-sub { font-size: 11px; color: var(--ink3); letter-spacing: 0.08em; text-transform: uppercase; margin-top: -2px; }
+.nav-right { display: flex; align-items: center; gap: 12px; }
+.nav-back { font-size: 12px; color: var(--ink3); background: none; border: none; cursor: pointer; }
+.nav-back:hover { color: var(--ink); }
+.nav-badge { background: var(--gold-lt); color: var(--gold-dk); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 10px; border-radius: 20px; }
+
+/* ── LAYOUT ── */
+.report-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  min-height: calc(100vh - 56px);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.report-main { padding: 2.5rem 3rem 5rem; }
+.report-aside { background: #07111e; border-left: 1px solid var(--surface3); padding: 2rem 1.5rem; position: sticky; top: 56px; height: calc(100vh - 56px); overflow-y: auto; }
+
+/* ── HEADER ── */
+.report-eyebrow {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 6px;
+}
+.report-title {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 32px; line-height: 1.2; color: var(--ink); margin-bottom: 4px;
+}
+.report-meta { font-size: 13px; color: var(--ink3); margin-bottom: 2.5rem; }
+
+/* ── SECTION LABELS ── */
+.section-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink3); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-num {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--surface3); color: var(--ink3);
+  font-size: 11px; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.section-hint { font-size: 11px; color: var(--ink3); font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+/* ── ① EXECUTIVE SUMMARY ── */
+.exec-block {
+  background: var(--surface2); border-radius: var(--radius-lg);
+  padding: 1.75rem 2rem; margin-bottom: 2.5rem;
+  border-left: 3px solid var(--gold);
+  animation: fadeUp 0.4s ease forwards;
+}
+.exec-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--gold-dk); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.exec-label-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+.exec-text { font-size: 15px; color: var(--ink2); line-height: 1.8; }
+.exec-text strong { color: var(--ink); font-weight: 500; }
+.score-row {
+  display: flex; align-items: center; gap: 18px;
+  margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--surface3);
+}
+.score-num-lg { font-family: 'Instrument Serif', Georgia, serif; font-size: 52px; color: var(--gold); line-height: 1; }
+.score-detail { flex: 1; }
+.score-grade { font-size: 14px; color: var(--ink2); margin-bottom: 6px; }
+.bar-track { height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--gold); border-radius: 3px; width: 0; transition: width 1s ease; }
+.score-key { display: flex; gap: 16px; margin-top: 8px; flex-wrap: wrap; }
+.sk { font-size: 11px; color: rgba(255,255,255,0.3); }
+.sk strong { color: rgba(255,255,255,0.65); }
+
+/* ── ② DIMENSION CARDS ── */
+.dim-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 2.5rem;
+}
+.dim-card {
+  border: 1px solid var(--surface3); border-radius: var(--radius-lg);
+  padding: 16px 18px; background: var(--surface2); cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  animation: fadeUp 0.4s ease forwards;
+}
+.dim-card:hover { border-color: rgba(255,255,255,0.2); }
+.dim-card.active { border-color: var(--gold); background: #111e35; }
+.dim-card-full { grid-column: span 2; }
+.dim-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+.dim-id-badge {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 10px; margin-bottom: 8px; display: inline-block;
+}
+.dim-score-circle {
+  width: 42px; height: 42px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 600; flex-shrink: 0;
+}
+.dim-name { font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 8px; }
+.dim-bar-track { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
+.dim-bar-fill { height: 100%; border-radius: 2px; }
+.dim-snippet { font-size: 12px; color: var(--ink3); line-height: 1.5; }
+.dim-click-hint {
+  font-size: 11px; color: var(--ink3); margin-top: 8px;
+  display: flex; align-items: center; gap: 4px; opacity: 0.7;
+}
+.dim-card.active .dim-click-hint { color: var(--gold-dk); opacity: 1; }
+
+/* ── ③ ACCORDION ── */
+.detail-section { margin-bottom: 3rem; }
+.accordion {
+  border: 1px solid var(--surface3); border-radius: var(--radius);
+  overflow: hidden; margin-bottom: 8px;
+  animation: fadeUp 0.4s ease forwards;
+}
+.accordion-header {
+  display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+  background: var(--surface2); cursor: pointer; user-select: none;
+  transition: background 0.12s;
+}
+.accordion-header:hover { background: #131f38; }
+.accordion-header.open { background: #111e35; border-bottom: 1px solid var(--surface3); }
+.acc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.acc-title { font-size: 14px; font-weight: 500; color: var(--ink); flex: 1; }
+.acc-score {
+  font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 10px;
+}
+.acc-chev { color: var(--ink3); transition: transform 0.2s; font-size: 16px; }
+.acc-chev.open { transform: rotate(180deg); }
+.accordion-body {
+  display: none; padding: 20px 22px; background: #0a1929;
+}
+.accordion-body.open { display: block; }
+.findings-list { list-style: none; padding: 0; margin-bottom: 16px; }
+.findings-list li {
+  display: flex; gap: 10px; font-size: 13px; color: var(--ink2);
+  line-height: 1.6; padding: 7px 0; border-bottom: 1px solid var(--surface2);
+}
+.findings-list li:last-child { border-bottom: none; }
+.f-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 7px; }
+.actions-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink3); margin-bottom: 10px;
+}
+.action-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--surface2); }
+.action-item:last-child { border-bottom: none; }
+.action-num {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--surface3); color: var(--ink2);
+  font-size: 11px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
+}
+.action-title { font-size: 13px; font-weight: 500; color: var(--ink); margin-bottom: 5px; }
+.action-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+.tag {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 10px;
+}
+.tag-quickwin { background: #0a2a20; color: #2dd4a0; border: 1px solid #2dd4a0; }
+.tag-effort-low { background: var(--teal-lt); color: var(--teal); }
+.tag-effort-med { background: var(--amber-lt); color: var(--amber); }
+.tag-impact-high { background: var(--gold-lt); color: var(--gold-dk); }
+.tag-impact-med { background: var(--surface2); color: var(--ink2); }
+
+/* ── ASIDE ── */
+.aside-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink3); margin-bottom: 12px;
+}
+.signal-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--surface3); }
+.signal-row:last-child { border-bottom: none; }
+.sig-name { font-size: 12px; color: var(--ink2); }
+.sig-pill { font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 8px; border-radius: 10px; }
+.sp-ok { background: var(--teal-lt); color: var(--teal); }
+.sp-warn { background: var(--amber-lt); color: var(--amber); }
+.sp-fail { background: var(--red-lt); color: var(--red); }
+.sp-na { background: var(--surface2); color: var(--ink3); }
+.aside-divider { height: 1px; background: var(--surface3); margin: 18px 0; }
+.quick-win-item {
+  font-size: 12px; color: var(--ink2); padding: 9px 12px;
+  background: var(--surface2); border-radius: 8px;
+  border-left: 2px solid var(--teal); margin-bottom: 6px;
+  line-height: 1.4;
+}
+.cta-panel {
+  background: var(--gold-lt); border: 1px solid rgba(160,114,42,0.3);
+  border-radius: var(--radius-lg); padding: 1.25rem;
+}
+.cta-title { font-family: 'Instrument Serif', serif; font-size: 18px; color: var(--ink); margin-bottom: 8px; }
+.cta-desc { font-size: 12px; color: var(--ink3); line-height: 1.6; margin-bottom: 12px; }
+.btn-gold { background: var(--gold); color: #fff; border: none; border-radius: var(--radius); padding: 10px 16px; font-size: 13px; font-weight: 500; cursor: pointer; width: 100%; font-family: 'DM Sans', sans-serif; }
+.btn-gold:hover { opacity: 0.9; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<div class="mockup-banner">
+  <strong>UI Mockup</strong> — Progressive Disclosure Report Layout &nbsp;·&nbsp;
+  <span>TalentGEO · Cassillon AI · June 2026</span>
+</div>
+
+<nav>
+  <a class="logo" href="#">
+    <div class="logo-mark">C</div>
+    <div>
+      <div class="logo-text">Cassillon</div>
+      <div class="logo-sub">Talent GEO</div>
+    </div>
+  </a>
+  <div class="nav-right">
+    <button class="nav-back">← New audit</button>
+    <div class="nav-badge">Beta</div>
+  </div>
+</nav>
+
+<div class="report-layout">
+
+  <!-- MAIN CONTENT -->
+  <div class="report-main">
+
+    <div class="report-eyebrow">Cassillon AI · GEO Audit Report</div>
+    <h1 class="report-title">Acme Corp — GEO Audit</h1>
+    <div class="report-meta">Generated June 17, 2026 · Report Only Tier</div>
+
+    <!-- ① WHAT WE FOUND -->
+    <div class="section-label">
+      <div class="section-num">1</div>
+      What We Found
+    </div>
+    <div class="exec-block">
+      <div class="exec-label"><div class="exec-label-dot"></div>Executive Summary</div>
+      <p class="exec-text">
+        Acme Corp has <strong>moderate AI visibility</strong> — your LinkedIn and Glassdoor presence is active, but your job postings lack the structured data and content signals that LLMs use to surface roles in response to candidate queries. <strong>The biggest opportunity is Schema.org JobPosting markup</strong>, which is either absent or incomplete on all three job URLs audited. Fixing schema and rewriting two or three job descriptions in an answer-first format could move your score from <strong>Developing → Established</strong> within 4–6 weeks.
+      </p>
+      <div class="score-row">
+        <div class="score-num-lg">62</div>
+        <div class="score-detail">
+          <div class="score-grade">Established · Cassillon GEO Protocol</div>
+          <div class="bar-track"><div class="bar-fill" id="score-bar"></div></div>
+          <div class="score-key">
+            <div class="sk"><strong>0–25</strong> Critical</div>
+            <div class="sk"><strong>26–50</strong> Developing</div>
+            <div class="sk"><strong>51–75</strong> Established</div>
+            <div class="sk"><strong>76–100</strong> Leading</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② DIMENSION CARDS -->
+    <div class="section-label">
+      <div class="section-num">2</div>
+      Dimension Scores
+      <span class="section-hint">— click any card for details below</span>
+    </div>
+    <div class="dim-grid">
+
+      <div class="dim-card" id="card-d1" onclick="toggleCard('d1')">
+        <div class="dim-card-top">
+          <div>
+            <div class="dim-id-badge" style="background:var(--blue-lt);color:var(--blue)">D1 · Schema</div>
+          </div>
+          <div class="dim-score-circle" style="background:var(--red-lt);color:var(--red)">22</div>
+        </div>
+        <div class="dim-name">Schema Integrity</div>
+        <div class="dim-bar-track"><div class="dim-bar-fill" style="width:22%;background:var(--red)"></div></div>
+        <div class="dim-snippet">JobPosting JSON-LD is missing or incomplete on all audited URLs.</div>
+        <div class="dim-click-hint"><i class="ti ti-chevron-down"></i> See findings &amp; fixes</div>
+      </div>
+
+      <div class="dim-card" id="card-d2" onclick="toggleCard('d2')">
+        <div class="dim-card-top">
+          <div>
+            <div class="dim-id-badge" style="background:var(--teal-lt);color:var(--teal)">D2 · Hygiene</div>
+          </div>
+          <div class="dim-score-circle" style="background:var(--amber-lt);color:var(--amber)">45</div>
+        </div>
+        <div class="dim-name">Career Site Hygiene</div>
+        <div class="dim-bar-track"><div class="dim-bar-fill" style="width:45%;background:var(--amber)"></div></div>
+        <div class="dim-snippet">Sitemap present but missing job page paths; robots.txt blocks select crawlers.</div>
+        <div class="dim-click-hint"><i class="ti ti-chevron-down"></i> See findings &amp; fixes</div>
+      </div>
+
+      <div class="dim-card" id="card-d3" onclick="toggleCard('d3')">
+        <div class="dim-card-top">
+          <div>
+            <div class="dim-id-badge" style="background:var(--amber-lt);color:var(--amber)">D3 · Content</div>
+          </div>
+          <div class="dim-score-circle" style="background:var(--amber-lt);color:var(--amber)">51</div>
+        </div>
+        <div class="dim-name">Job Posting Content</div>
+        <div class="dim-bar-track"><div class="dim-bar-fill" style="width:51%;background:var(--amber)"></div></div>
+        <div class="dim-snippet">Descriptions are long and task-heavy — no salary signals or answer-first structure.</div>
+        <div class="dim-click-hint"><i class="ti ti-chevron-down"></i> See findings &amp; fixes</div>
+      </div>
+
+      <div class="dim-card" id="card-d4" onclick="toggleCard('d4')">
+        <div class="dim-card-top">
+          <div>
+            <div class="dim-id-badge" style="background:var(--purple-lt);color:var(--purple)">D4 · Brand</div>
+          </div>
+          <div class="dim-score-circle" style="background:var(--teal-lt);color:var(--teal)">74</div>
+        </div>
+        <div class="dim-name">Employer Brand Signals</div>
+        <div class="dim-bar-track"><div class="dim-bar-fill" style="width:74%;background:var(--teal)"></div></div>
+        <div class="dim-snippet">Strong LinkedIn and Glassdoor presence; entity naming slightly inconsistent off-site.</div>
+        <div class="dim-click-hint"><i class="ti ti-chevron-down"></i> See findings &amp; fixes</div>
+      </div>
+
+      <div class="dim-card dim-card-full" id="card-d5" onclick="toggleCard('d5')">
+        <div style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:start;">
+          <div>
+            <div class="dim-card-top">
+              <div><div class="dim-id-badge" style="background:var(--red-lt);color:var(--red)">D5 · Distribution</div></div>
+              <div class="dim-score-circle" style="background:var(--red-lt);color:var(--red)">31</div>
+            </div>
+            <div class="dim-name">Distribution Coverage</div>
+            <div class="dim-bar-track"><div class="dim-bar-fill" style="width:31%;background:var(--red)"></div></div>
+            <div class="dim-snippet">Google for Jobs presence is partial; no confirmed ATS feed to Indeed.</div>
+            <div class="dim-click-hint"><i class="ti ti-chevron-down"></i> See findings &amp; fixes</div>
+          </div>
+          <div style="text-align:center;padding:10px 18px;background:var(--surface3);border-radius:var(--radius);margin-top:4px;">
+            <div style="font-size:22px;font-weight:600;color:var(--red)">2/5</div>
+            <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:0.05em;margin-top:3px;">platforms active</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ③ EXPANDABLE DETAIL -->
+    <div class="section-label">
+      <div class="section-num">3</div>
+      Findings &amp; Actions
+      <span class="section-hint">— expand any dimension for full detail</span>
+    </div>
+    <div class="detail-section">
+
+      <!-- D1 -->
+      <div class="accordion" id="acc-d1">
+        <div class="accordion-header" id="ah-d1" onclick="toggleAccordion('d1')">
+          <div class="acc-dot" style="background:var(--blue)"></div>
+          <span class="acc-title">D1 · Schema Integrity</span>
+          <span class="acc-score" style="background:var(--red-lt);color:var(--red)">22 / 100</span>
+          <i class="ti ti-chevron-down acc-chev" id="chev-d1"></i>
+        </div>
+        <div class="accordion-body" id="ab-d1">
+          <ul class="findings-list">
+            <li><div class="f-dot" style="background:var(--red)"></div>No valid JSON-LD JobPosting block found on any of the 3 job URLs provided — LLMs cannot parse role details.</li>
+            <li><div class="f-dot" style="background:var(--amber)"></div>Partial microdata detected on job list page only, not on individual posting pages.</li>
+            <li><div class="f-dot" style="background:var(--amber)"></div>Missing required fields: baseSalary, validThrough, employmentType, hiringOrganization.</li>
+            <li><div class="f-dot" style="background:var(--blue)"></div>Google Rich Results Test returns 0 eligible job pages for this domain.</li>
+          </ul>
+          <div class="actions-label">Recommended actions</div>
+          <div class="action-item">
+            <div class="action-num">1</div>
+            <div>
+              <div class="action-title">Add JobPosting JSON-LD to every job page</div>
+              <div class="action-tags">
+                <span class="tag tag-quickwin">⚡ Quick Win</span>
+                <span class="tag tag-effort-low">Effort: Low</span>
+                <span class="tag tag-impact-high">Impact: High</span>
+              </div>
+            </div>
+          </div>
+          <div class="action-item">
+            <div class="action-num">2</div>
+            <div>
+              <div class="action-title">Include baseSalary — even a range — in all schema</div>
+              <div class="action-tags">
+                <span class="tag tag-quickwin">⚡ Quick Win</span>
+                <span class="tag tag-effort-low">Effort: Low</span>
+                <span class="tag tag-impact-high">Impact: High</span>
+              </div>
+            </div>
+          </div>
+          <div class="action-item">
+            <div class="action-num">3</div>
+            <div>
+              <div class="action-title">Validate schema with Google's Rich Results Test after deployment</div>
+              <div class="action-tags">
+                <span class="tag tag-effort-low">Effort: Low</span>
+                <span class="tag tag-impact-high">Impact: High</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- D2 -->
+      <div class="accordion" id="acc-d2">
+        <div class="accordion-header" id="ah-d2" onclick="toggleAccordion('d2')">
+          <div class="acc-dot" style="background:var(--teal)"></div>
+          <span class="acc-title">D2 · Career Site Hygiene</span>
+          <span class="acc-score" style="background:var(--amber-lt);color:var(--amber)">45 / 100</span>
+          <i class="ti ti-chevron-down acc-chev" id="chev-d2"></i>
+        </div>
+        <div class="accordion-body" id="ab-d2">
+          <ul class="findings-list">
+            <li><div class="f-dot" style="background:var(--red)"></div>robots.txt disallows GPTBot and PerplexityBot — AI crawlers are blocked from indexing job content.</li>
+            <li><div class="f-dot" style="background:var(--amber)"></div>sitemap.xml exists but excludes /jobs/* paths entirely, so crawlers miss individual postings.</li>
+            <li><div class="f-dot" style="background:var(--teal)"></div>Career site loads in under 2.5s — good baseline for crawlability.</li>
+            <li><div class="f-dot" style="background:var(--teal)"></div>HTTPS in place, no redirect chains detected.</li>
+          </ul>
+          <div class="actions-label">Recommended actions</div>
+          <div class="action-item">
+            <div class="action-num">1</div>
+            <div>
+              <div class="action-title">Allow GPTBot and PerplexityBot in robots.txt</div>
+              <div class="action-tags">
+                <span class="tag tag-quickwin">⚡ Quick Win</span>
+                <span class="tag tag-effort-low">Effort: Low</span>
+                <span class="tag tag-impact-high">Impact: High</span>
+              </div>
+            </div>
+          </div>
+          <div class="action-item">
+            <div class="action-num">2</div>
+            <div>
+              <div class="action-title">Add /jobs/* paths to sitemap.xml</div>
+              <div class="action-tags">
+                <span class="tag tag-quickwin">⚡ Quick Win</span>
+                <span class="tag tag-effort-low">Effort: Low</span>
+                <span class="tag tag-impact-high">Impact: High</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- D3 -->
+      <div class="accordion" id="acc-d3">
+        <div class="accordion-header" id="ah-d3" onclick="toggleAccordion('d3')">
+          <div class="acc-dot" style="background:var(--amber)"></div>
+          <span class="acc-title">D3 · Job Posting Content</span>
+          <span class="acc-score" style="background:var(--amber-lt);color:var(--amber)">51 / 100</span>
+          <i class="ti ti-chevron-down acc-chev" id="chev-d3"></i>
+        </div>
+        <div class="accordion-body" id="ab-d3">
+          <ul class="findings-list">
+            <li><div class="f-dot" style="background:var(--red)"></div>No salary or compensation signals in any of the 3 audited job descriptions — a key LLM cite signal.</li>
+            <li><div class="f-dot" style="background:var(--amber)"></div>Job descriptions open with a company paragraph, not a role summary — fails answer-first structure.</li>
+            <li><div class="f-dot" style="background:var(--amber)"></div>Average reading level is Grade 14 — overly formal for AI paraphrasing.</li>
+            <li><div class="f-dot" style="background:var(--teal)"></div>Role titles are clean and searchable — good baseline for query matching.</li>
+          </ul>
+          <div class="actions-label">Recommended actions</div>
+          <div class="action-item">
+            <div class="action-num">1</div>
+            <div>
+              <div class="action-title">Add compensation range to every job description</div>
+              <div class="action-tags">
+                <span class="tag tag-effort-low">Effort: Low</span>
+                <span class="tag tag-impact-high">Impact: High</span>
+              </div>
+            </div>
+          </div>
+          <div class="action-item">
+            <div class="action-num">2</div>
+            <div>
+              <div class="action-title">Rewrite opening paragraph: lead with role, not company</div>
+              <div class="action-tags">
+                <span class="tag tag-effort-med">Effort: Medium</span>
+                <span class="tag tag-impact-high">Impact: High</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- D4 -->
+      <div class="accordion" id="acc-d4">
+        <div class="accordion-header" id="ah-d4" onclick="toggleAccordion('d4')">
+          <div class="acc-dot" style="background:var(--purple)"></div>
+          <span class="acc-title">D4 · Employer Brand Signals</span>
+          <span class="acc-score" style="background:var(--teal-lt);color:var(--teal)">74 / 100</span>
+          <i class="ti ti-chevron-down acc-chev" id="chev-d4"></i>
+        </div>
+        <div class="accordion-body" id="ab-d4">
+          <ul class="findings-list">
+            <li><div class="f-dot" style="background:var(--teal)"></div>LinkedIn company page is active and verified with 1,200+ followers.</li>
+            <li><div class="f-dot" style="background:var(--teal)"></div>Glassdoor profile is claimed with a 3.8 rating and employer responses present.</li>
+            <li><div class="f-dot" style="background:var(--amber)"></div>Company name is listed as "Acme Corp" on LinkedIn but "Acme Corporation" on Glassdoor and Indeed — inconsistent entity naming weakens LLM confidence.</li>
+            <li><div class="f-dot" style="background:var(--amber)"></div>No press mentions or earned media in the past 6 months.</li>
+          </ul>
+          <div class="actions-label">Recommended actions</div>
+          <div class="action-item">
+            <div class="action-num">1</div>
+            <div>
+              <div class="action-title">Standardise entity name across all platforms</div>
+              <div class="action-tags">
+                <span class="tag tag-quickwin">⚡ Quick Win</span>
+                <span class="tag tag-effort-low">Effort: Low</span>
+                <span class="tag tag-impact-high">Impact: High</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- D5 -->
+      <div class="accordion" id="acc-d5">
+        <div class="accordion-header" id="ah-d5" onclick="toggleAccordion('d5')">
+          <div class="acc-dot" style="background:var(--red)"></div>
+          <span class="acc-title">D5 · Distribution Coverage</span>
+          <span class="acc-score" style="background:var(--red-lt);color:var(--red)">31 / 100</span>
+          <i class="ti ti-chevron-down acc-chev" id="chev-d5"></i>
+        </div>
+        <div class="accordion-body" id="ab-d5">
+          <ul class="findings-list">
+            <li><div class="f-dot" style="background:var(--amber)"></div>Google for Jobs shows partial results — 1 of 3 audited postings appears in job search; 2 are missing.</li>
+            <li><div class="f-dot" style="background:var(--red)"></div>No active Indeed ATS feed detected — jobs are not syncing automatically.</li>
+            <li><div class="f-dot" style="background:var(--red)"></div>Bing job search returns no results for this domain.</li>
+            <li><div class="f-dot" style="background:var(--teal)"></div>LinkedIn jobs are active and appear in LinkedIn search results.</li>
+          </ul>
+          <div class="actions-label">Recommended actions</div>
+          <div class="action-item">
+            <div class="action-num">1</div>
+            <div>
+              <div class="action-title">Connect ATS to Indeed via direct feed or XML sitemap</div>
+              <div class="action-tags">
+                <span class="tag tag-effort-med">Effort: Medium</span>
+                <span class="tag tag-impact-high">Impact: High</span>
+              </div>
+            </div>
+          </div>
+          <div class="action-item">
+            <div class="action-num">2</div>
+            <div>
+              <div class="action-title">Fix schema on remaining 2 postings to restore Google for Jobs eligibility</div>
+              <div class="action-tags">
+                <span class="tag tag-effort-low">Effort: Low</span>
+                <span class="tag tag-impact-high">Impact: High</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ASIDE -->
+  <aside class="report-aside">
+    <div class="aside-label">Platform signals</div>
+    <div class="signal-row"><span class="sig-name">Google for Jobs</span><span class="sig-pill sp-warn">Partial</span></div>
+    <div class="signal-row"><span class="sig-name">LinkedIn Jobs</span><span class="sig-pill sp-ok">Active</span></div>
+    <div class="signal-row"><span class="sig-name">Glassdoor</span><span class="sig-pill sp-warn">Partial</span></div>
+    <div class="signal-row"><span class="sig-name">Indeed ATS Feed</span><span class="sig-pill sp-fail">Not Found</span></div>
+    <div class="signal-row"><span class="sig-name">Schema.org</span><span class="sig-pill sp-fail">Not Found</span></div>
+    <div class="signal-row"><span class="sig-name">Bing Career Search</span><span class="sig-pill sp-na">N/A</span></div>
+
+    <div class="aside-divider"></div>
+
+    <div class="aside-label">Top quick wins</div>
+    <div class="quick-win-item">Add JobPosting JSON-LD to all job pages</div>
+    <div class="quick-win-item">Allow GPTBot in robots.txt</div>
+    <div class="quick-win-item">Add /jobs/* to sitemap.xml</div>
+    <div class="quick-win-item">Standardise entity name across all platforms</div>
+
+    <div class="aside-divider"></div>
+
+    <div class="cta-panel">
+      <div class="cta-title">Ready to act on these findings?</div>
+      <div class="cta-desc">Work with Cassillon to implement a full GEO optimization program — structured data, content rewriting, distribution, and ongoing monitoring.</div>
+      <button class="btn-gold">Schedule a discovery call →</button>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+  setTimeout(() => {
+    const bar = document.getElementById('score-bar');
+    if (bar) bar.style.width = '62%';
+  }, 300);
+
+  function toggleAccordion(dim) {
+    const body = document.getElementById('ab-' + dim);
+    const header = document.getElementById('ah-' + dim);
+    const chev = document.getElementById('chev-' + dim);
+    const isOpen = body.classList.contains('open');
+    if (isOpen) {
+      body.classList.remove('open');
+      body.style.display = 'none';
+      header.classList.remove('open');
+      chev.classList.remove('open');
+    } else {
+      body.classList.add('open');
+      body.style.display = 'block';
+      header.classList.add('open');
+      chev.classList.add('open');
+    }
+  }
+
+  function toggleCard(dim) {
+    const card = document.getElementById('card-' + dim);
+    const wasActive = card.classList.contains('active');
+    card.classList.toggle('active');
+    const body = document.getElementById('ab-' + dim);
+    const header = document.getElementById('ah-' + dim);
+    const chev = document.getElementById('chev-' + dim);
+    if (!wasActive) {
+      body.classList.add('open');
+      body.style.display = 'block';
+      header.classList.add('open');
+      chev.classList.add('open');
+      setTimeout(() => {
+        document.getElementById('acc-' + dim).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 50);
+    }
+  }
+</script>
+</body>
+</html>

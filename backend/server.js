@@ -3,6 +3,7 @@ const cors = require('cors');
 const fetch = require('node-fetch');
 const db = require('./db');
 const { upsertCompany, saveAudit } = require('./auditRepository');
+const { classifyTier } = require('./tierClassifier');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -647,7 +648,7 @@ app.post('/audit', async (req, res) => {
     return res.status(500).json({ error: 'API key not configured' });
   }
 
-  const { domain, brand, industry, context, jobUrls, gscToken, selectedATS } = req.body;
+  const { domain, brand, industry, context, jobUrls, gscToken, selectedATS, isOwnCompany, declaredTier } = req.body;
 
   if (!domain || !brand) {
     return res.status(400).json({ error: 'domain and brand are required' });
@@ -767,6 +768,58 @@ app.post('/audit', async (req, res) => {
     }
   };
 
+  // ── TIER CLASSIFICATION ───────────────────────────────────────────────────
+
+  let tierResult;
+  try {
+    tierResult = await classifyTier({
+      domain: baseUrl,
+      companyName: brand,
+      declaredTier: declaredTier || null,
+      isOwnCompany: !!isOwnCompany,
+    });
+  } catch (err) {
+    console.error('Tier classification error:', err.message);
+    tierResult = {
+      tier: 2, confidence: 'low', assignment_method: 'system',
+      pdl_headcount: null, pdl_revenue_usd: null, funding_stage: null,
+      pdl_found: false, discrepancy: false, discrepancy_detail: null,
+    };
+  }
+
+  const TIER_NAMES = { 1: 'Startup / Early-Stage', 2: 'Growth-Stage', 3: 'Established Mid-Market', 4: 'Enterprise' };
+  const TIER_WEIGHTS = {
+    1: { d1: 0.15, d2: 0.15, d3: 0.10, d4: 0.20, d5: 0.40 },
+    2: { d1: 0.15, d2: 0.20, d3: 0.15, d4: 0.15, d5: 0.35 },
+    3: { d1: 0.15, d2: 0.20, d3: 0.20, d4: 0.15, d5: 0.30 },
+    4: { d1: 0.15, d2: 0.25, d3: 0.20, d4: 0.10, d5: 0.30 },
+  };
+  const tierWeights = TIER_WEIGHTS[tierResult.tier];
+  const goodThresholds  = { 1: 50, 2: 65, 3: 70, 4: 75 };
+  const excellentThresholds = { 1: 65, 2: 80, 3: 85, 4: 90 };
+  const goodThreshold = goodThresholds[tierResult.tier];
+  const excellentThreshold = excellentThresholds[tierResult.tier];
+
+  const tierContext = `TIER CLASSIFICATION:
+Company tier: T${tierResult.tier} — ${TIER_NAMES[tierResult.tier]}
+Assignment method: ${tierResult.assignment_method}
+Confidence: ${tierResult.confidence}
+PDL headcount: ${tierResult.pdl_headcount ?? 'not found'}
+PDL revenue: ${tierResult.pdl_revenue_usd ? '$' + tierResult.pdl_revenue_usd.toLocaleString() : 'not found'}${tierResult.discrepancy ? `
+DISCREPANCY FLAGGED: ${tierResult.discrepancy_detail}` : ''}
+
+Dimension weights for T${tierResult.tier}:
+- D1 Schema Integrity: ${Math.round(tierWeights.d1 * 100)}%
+- D2 Content Readiness: ${Math.round(tierWeights.d2 * 100)}%
+- D3 Brand Signal: ${Math.round(tierWeights.d3 * 100)}%
+- D4 Continuity Indicator: ${Math.round(tierWeights.d4 * 100)}%
+- D5 Distribution / Agentic Readiness: ${Math.round(tierWeights.d5 * 100)}%
+
+Good threshold for T${tierResult.tier}: ${goodThreshold}+
+Excellent threshold for T${tierResult.tier}: ${excellentThreshold}+
+
+Apply these weights when calculating the composite score. Reference the tier in your narrative and grade label.`;
+
   // ── CLAUDE PROMPT CONTEXTS ────────────────────────────────────────────────
 
   const d3ScoredPages = jobAudits.filter(j => j.fetchSuccess && j.d3Score);
@@ -846,6 +899,8 @@ You will receive REAL audit data collected from the client's actual career site,
 
 Do not invent findings. Base every score and finding on the real data provided.
 
+${tierContext}
+
 ${gscContext}
 
 ${d3Context}
@@ -920,8 +975,6 @@ Return ONLY valid JSON
       "dataSource": "${selectedATS && selectedATS.length > 0 ? 'ats+tips' : 'inferred'}"
     }
   ],
-    }
-  ],
   "internalActions": [
     {"title": "action title", "description": "specific actionable step referencing real findings", "effort": "Low|Medium|High", "impact": "High|Medium", "dimension": "D1"}
   ],
@@ -950,6 +1003,8 @@ Additional context: ${context || 'None'}
 
 REAL AUDIT DATA:
 ${JSON.stringify(realDataSummary, null, 2)}`;
+
+
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -990,6 +1045,7 @@ ${JSON.stringify(realDataSummary, null, 2)}`;
         report,
         auditData: realDataSummary,
         requestBody: req.body,
+        tierResult,
       });
       res.json({ success: true, report, auditData: realDataSummary, auditId });
     } catch (dbErr) {
