@@ -395,7 +395,7 @@ function extractVisibleText(html) {
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  return text.substring(0, 3000);
+  return text.substring(0, 8000);
 }
 
 // ─── D2 JD SUB-PROTOCOL SCORING ──────────────────────────────────────────────
