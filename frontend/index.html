@@ -918,51 +918,6 @@
     });
   });
 
-  // ─── FORM STATE PERSISTENCE ───────────────────────────────────────────────
-
-  function saveFormState() {
-    const state = {
-      brand: document.getElementById('input-brand').value,
-      industry: document.getElementById('input-industry').value,
-      domain: document.getElementById('input-domain').value,
-      careerUrl: document.getElementById('input-career-url').value,
-      hq: document.getElementById('input-hq').value,
-      name: document.getElementById('input-name').value,
-      email: document.getElementById('input-email').value,
-      context: document.getElementById('input-context').value,
-      url1: document.getElementById('url-1').value,
-      url2: document.getElementById('url-2').value,
-      url3: document.getElementById('url-3').value,
-      tier: selectedTier,
-      isOwnCompany,
-      declaredTier: document.getElementById('input-declared-tier').value
-    };
-    sessionStorage.setItem('tgeo_form', JSON.stringify(state));
-  }
-
-  function restoreFormState() {
-    try {
-      const saved = sessionStorage.getItem('tgeo_form');
-      if (!saved) return;
-      const s = JSON.parse(saved);
-      if (s.brand)     document.getElementById('input-brand').value = s.brand;
-      if (s.industry)  document.getElementById('input-industry').value = s.industry;
-      if (s.domain)    document.getElementById('input-domain').value = s.domain;
-      if (s.careerUrl) document.getElementById('input-career-url').value = s.careerUrl;
-      if (s.hq)        document.getElementById('input-hq').value = s.hq;
-      if (s.name)      document.getElementById('input-name').value = s.name;
-      if (s.email)     document.getElementById('input-email').value = s.email;
-      if (s.context)   document.getElementById('input-context').value = s.context;
-      if (s.url1)      document.getElementById('url-1').value = s.url1;
-      if (s.url2)      document.getElementById('url-2').value = s.url2;
-      if (s.url3)      document.getElementById('url-3').value = s.url3;
-      if (s.tier)        selectTier(s.tier);
-      if (s.isOwnCompany && !isOwnCompany) toggleOwnCompany();
-      if (s.declaredTier) document.getElementById('input-declared-tier').value = s.declaredTier;
-      sessionStorage.removeItem('tgeo_form');
-    } catch(e) { /* ignore */ }
-  }
-
   // ─── OWN COMPANY TOGGLE ───────────────────────────────────────────────────
 
   function toggleOwnCompany() {

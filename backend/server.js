@@ -9,8 +9,6 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
-// The backend's own public URL — used to build the redirect URI
-const BACKEND_URL = process.env.BACKEND_URL || 'https://talentgeo-backend-360027703478.us-central1.run.app';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://talentgeo-frontend-360027703478.us-central1.run.app';
 
 app.use(cors({ origin: FRONTEND_URL, credentials: true }));
@@ -738,14 +736,14 @@ ${redditResult.topSignals.map(s => {
 Suggested D3 (Brand Signal Assessment) score based on Reddit signals: ${d4Score ? d4Score.suggestedScore : 'N/A'}/100
 You may adjust up or down based on industry norms, brand size, and recency.
 For D4 (Continuity Indicator): use Reddit sentiment vs. career site owned content as a theme-level continuity signal. Describe any divergence descriptively, not prosecutorially.
-Set dataSource to "reddit+real" for both D3 and D4.
+Set dataSource to "reddit+real" for D3 and "real" for D4.
 Reference specific post titles or subreddits in D3 findings.`;
 
   } else if (redditResult.success && redditResult.totalMentions === 0) {
     d4Context = `D3 + D4 REDDIT DATA: Reddit searched successfully — no mentions of "${brand}" found.
 Brand may be small, niche, or not publicly discussed.
 Suggested D3 score: 45/100 (neutral baseline). D4: note absence of downstream signal; do not heavily penalize.
-Set dataSource to "reddit+real" for both D3 and D4.`;
+Set dataSource to "reddit+real" for D3 and "real" for D4.`;
 
   } else {
     d4Context = `D3 + D4 DATA: Reddit fetch failed (${redditResult.error || 'unknown error'}). Score D3 and D4 as inferred from brand/domain knowledge only.
