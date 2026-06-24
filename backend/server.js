@@ -535,98 +535,134 @@ function extractVisibleText(html) {
   return text.substring(0, 3000);
 }
 
-// ─── D3 SCORING CONFIG ────────────────────────────────────────────────────────
+// ─── D2 JD SUB-PROTOCOL SCORING ──────────────────────────────────────────────
+// Scores job description content against the 6 UTP V2 sub-dimensions.
+// Each sub-dimension scored 1–5; total max 30; normalized to 0–100 for composite.
+// Score interpretation: 25–30 = Excellent, 13–24 = Improvement needed, <13 = Rewrite required.
 
-const D3_CONFIG = {
-  "weights": {
-    "compensation":    30,
-    "locationClarity": 15,
-    "employmentType":  10,
-    "wordCount":       10,
-    "answerFirst":     10,
-    "reqVsResp":       10,
-    "benefitsSignals":  8,
-    "readability":      7
-  },
-  "thresholds": {
-    "wordCountMin":   150,
-    "wordCountIdeal": 400,
-    "wordCountMax":   900
-  }
-};
+const UTP_METADATA_FIELDS = [
+  { key: 'roleTitle',     label: 'Role Title',          pattern: /\b(title|role|position)\s*:/i },
+  { key: 'roleLevel',     label: 'Role Level',          pattern: /\b(senior|junior|lead|principal|staff|ic[1-5]|manager|director|vp|associate|mid.?level)\b/i },
+  { key: 'function',      label: 'Function',            pattern: /\b(engineering|product|sales|marketing|operations|finance|legal|hr|design|data|research|customer success|support|security)\b/i },
+  { key: 'stage',         label: 'Stage',               pattern: /\b(pre.?seed|seed|series [abcde]|pre.?ipo|growth.?stage|startup|early.?stage)\b/i },
+  { key: 'location',      label: 'Location',            pattern: /\b(remote|hybrid|on.?site|in.?office|[A-Z][a-z]+,\s*[A-Z]{2})\b/ },
+  { key: 'dealSize',      label: 'Deal Size / Scope',   pattern: /\b(deal size|quota|book of business|territory|aov|arr|\$[\d]+[kmb])\b/i },
+  { key: 'teamSize',      label: 'Team Size Owned',     pattern: /\b(team of \d|manage \d+|lead a team|direct reports|reports to you)\b/i },
+  { key: 'yearsRequired', label: 'Years Required',      pattern: /\b(\d\+?\s*years?|[0-9]+[-–][0-9]+\s*years?)\b/i },
+  { key: 'compensation',  label: 'Compensation',        pattern: /\$[\d,]+|\b(salary|base pay|total comp|equity|ote|on.?target earnings)\b/i },
+  { key: 'department',    label: 'Department',          pattern: /\b(reports to|reporting to|department|division)\b/i },
+];
 
-// ─── D3 SCORING FUNCTION ──────────────────────────────────────────────────────
+const UTP_SECTIONS = [
+  { key: 'opportunity', label: 'THE OPPORTUNITY',         pattern: /\b(the opportunity|about (the |this )?(role|opportunity|position)|opportunity overview)\b/i },
+  { key: 'roleType',    label: 'ROLE TYPE',               pattern: /\b(role type|position type|this is a|this role is)\b/i },
+  { key: 'ownership',   label: 'WHAT YOU WILL OWN',       pattern: /\b(what you('ll| will) own|key responsibilities|you will own|your responsibilities|what you('ll| will) do|responsibilities)\b/i },
+  { key: 'required',    label: 'REQUIRED SKILLS',         pattern: /\b(required (skills?|qualifications?)|must.?have|minimum qualifications|what (we'?re?|you) (looking for|need|require))\b/i },
+  { key: 'preferred',   label: 'STRONGLY PREFERRED',      pattern: /\b(preferred|nice.?to.?have|bonus if|strongly preferred|plus if you|ideal candidate)\b/i },
+  { key: 'whoYouAre',   label: 'WHO YOU ARE',             pattern: /\b(who you are|about you|you bring|you are someone|the ideal candidate|what you bring)\b/i },
+  { key: 'success',     label: 'WHAT SUCCESS LOOKS LIKE', pattern: /\b(success looks like|what success|30.60.90|first (30|90|6) (days?|months?)|in your first)\b/i },
+];
 
-function scoreJobPostingContent(text) {
+function scoreD2JDContent(text) {
   if (!text || text.trim().length === 0) {
-    return { score: 0, signals: {}, wordCount: 0, note: 'No content available to score' };
+    return { totalScore: 5, normalizedScore: 17, subDimensions: {}, note: 'No content available to score' };
   }
 
   const lower = text.toLowerCase();
-  const w = D3_CONFIG.weights;
-  const t = D3_CONFIG.thresholds;
-  const signals = {};
-
-  const hasDollarAmount = /\$[\d,]+(\s*(k|\/hr|\/hour|\/year|,000))?/i.test(text);
-  const hasCompKeyword  = /\b(salary|compensation|pay range|base pay|hourly rate|ote|on-target earnings|total compensation|annual pay|wage)\b/i.test(lower);
-  signals.compensation = hasDollarAmount || hasCompKeyword;
-
-  const hasRemote   = /\b(remote|work from home|wfh|fully remote|remote-first)\b/i.test(lower);
-  const hasHybrid   = /\b(hybrid|flexible location|partially remote)\b/i.test(lower);
-  const hasOnsite   = /\b(on-?site|in-?office|in person|on location)\b/i.test(lower);
-  const hasCity     = /\b([A-Z][a-z]+,?\s+(CA|NY|TX|FL|WA|IL|GA|MA|CO|OR|OH|NC|VA|AZ|MN|NJ|DC|PA|MI|MD|UT|TN|MO|IN|WI)\b)/.test(text);
-  signals.locationClarity = hasRemote || hasHybrid || hasOnsite || hasCity;
-
-  signals.employmentType = /\b(full.?time|part.?time|contract|contractor|temporary|temp|freelance|permanent|ftc|w-?2|1099)\b/i.test(lower);
-
   const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
-  let wordCountScore = 0;
-  if (wordCount >= t.wordCountMin && wordCount <= t.wordCountMax) {
-    wordCountScore = wordCount >= t.wordCountIdeal
-      ? 1
-      : (wordCount - t.wordCountMin) / (t.wordCountIdeal - t.wordCountMin);
-  } else if (wordCount > t.wordCountMax) {
-    wordCountScore = 0.5;
+
+  // ── Sub-dimension 1: Metadata Clarity ──────────────────────────────────────
+  const metadataDetail = {};
+  let metadataFieldsFound = 0;
+  for (const field of UTP_METADATA_FIELDS) {
+    const found = field.pattern.test(text);
+    metadataDetail[field.key] = { label: field.label, found };
+    if (found) metadataFieldsFound++;
   }
-  signals.wordCount = wordCountScore;
+  const metadataScore = metadataFieldsFound >= 9 ? 5
+    : metadataFieldsFound >= 7 ? 4
+    : metadataFieldsFound >= 5 ? 3
+    : metadataFieldsFound >= 3 ? 2 : 1;
 
-  const firstThird = lower.substring(0, Math.floor(lower.length * 0.3));
-  signals.answerFirst = /\b(about (the |this )?(role|position|job|opportunity)|overview|summary|what you('ll| will) do|the role|position summary|job summary)\b/i.test(firstThird);
+  // ── Sub-dimension 2: Structural Clarity ────────────────────────────────────
+  const sectionDetail = {};
+  let sectionsFound = 0;
+  for (const section of UTP_SECTIONS) {
+    const found = section.pattern.test(text);
+    sectionDetail[section.key] = { label: section.label, found };
+    if (found) sectionsFound++;
+  }
+  const hasHeaders = /\n[A-Z][A-Z\s]{4,}[\n:]/.test(text);
+  const hasBullets = (text.match(/\n\s*[-•*]\s/g) || []).length >= 3;
+  const baseStructural = sectionsFound >= 6 ? 5 : sectionsFound >= 4 ? 4 : sectionsFound >= 2 ? 3 : sectionsFound >= 1 ? 2 : 1;
+  const structuralScore = Math.min(5, baseStructural + (sectionsFound < 3 && (hasHeaders || hasBullets) ? 1 : 0));
 
-  const hasResp = /\b(responsibilities|what you('ll| will) do|your role|key duties|day.to.day|you will)\b/i.test(lower);
-  const hasReqs = /\b(requirements|qualifications|what we('re| are) looking for|must have|you (have|bring)|skills (needed|required)|minimum qualifications)\b/i.test(lower);
-  signals.reqVsResp = hasResp && hasReqs;
+  // ── Sub-dimension 3: Specificity & Quantification ──────────────────────────
+  const specificitySignals = {
+    yearsWithNumbers:    /\b\d+\+?\s*years?\b/i.test(text),
+    specificTech:        /\b(python|javascript|typescript|react|node\.?js|aws|gcp|azure|sql|salesforce|hubspot|java|golang|kubernetes|terraform|postgresql|mongodb)\b/i.test(lower),
+    measurableOutcome:   /\b(\d+%|\d+x|increase|reduce|grow|improve).{0,40}(revenue|retention|efficiency|pipeline|conversion|mrr|arr|churn)\b/i.test(lower),
+    specificCredential:  /\b(bachelor|master|mba|phd|bs|ms|ba|degree in|certified|certification|cpa|cfa|pmp)\b/i.test(lower),
+    dollarFigures:       /\$[\d,]+(k|m|b|\s*million|\s*thousand)?\b/i.test(text),
+    scopeNumbers:        /\b(team of \d+|\d+ direct|\d+ engineers?|\d+ accounts?|manage \d+|\d+\s*reports)\b/i.test(lower),
+  };
+  const specificityCount = Object.values(specificitySignals).filter(Boolean).length;
+  const specificityScore = specificityCount >= 5 ? 5 : specificityCount >= 4 ? 4 : specificityCount >= 2 ? 3 : specificityCount >= 1 ? 2 : 1;
 
-  signals.benefitsSignals = /\b(benefits|401k|pto|vacation|health insurance|dental|vision|equity|stock|rsu|bonus|parental leave|paid leave|unlimited pto|flexible hours|professional development|tuition|wellness)\b/i.test(lower);
+  // ── Sub-dimension 4: Role Clarity ──────────────────────────────────────────
+  const firstThird = text.substring(0, Math.floor(text.length * 0.35));
+  const roleClaritySignals = {
+    overviewEarly:    /\b(about (the |this )?(role|position)|overview|summary|what you('ll| will) do|the role|position summary)\b/i.test(firstThird),
+    whyRoleExists:    /\b(we('re| are) (looking for|hiring|growing)|this role (exists?|will|is critical)|as we (scale|grow|expand))\b/i.test(lower),
+    outcomeOrImpact:  /\b(you('ll| will) (own|drive|lead|build|be responsible)|your (impact|mission|goal|focus)|success in this role)\b/i.test(lower),
+    jobCategory:      /\b(individual contributor|people manager|technical lead|founding|player.?coach|ic role|management role)\b/i.test(lower),
+    reportingLine:    /\b(reports? to|reporting (line|to)|part of the .{3,25} team)\b/i.test(lower),
+  };
+  const roleClarityCount = Object.values(roleClaritySignals).filter(Boolean).length;
+  const roleClarityScore = roleClarityCount >= 4 ? 5 : roleClarityCount >= 3 ? 4 : roleClarityCount >= 2 ? 3 : roleClarityCount >= 1 ? 2 : 1;
 
-  const hasBulletStructure = (text.match(/\n/g) || []).length > 5;
-  const jargonCount = (lower.match(/\b(synergy|leverage|rockstar|ninja|guru|wizard|unicorn|thought leader|disruptive|paradigm|ecosystem|scalable solution)\b/gi) || []).length;
-  signals.readability = hasBulletStructure && jargonCount < 3;
+  // ── Sub-dimension 5: Brand Voice & Authenticity ────────────────────────────
+  const jargonCount = (lower.match(/\b(rockstar|ninja|guru|wizard|unicorn|thought leader|disruptive|synergy|leverage|paradigm|ecosystem|best.?in.?class|world.?class|fast.?paced environment|wear many hats|hit the ground running|self.?starter|passionate about)\b/gi) || []).length;
+  const genericCount = (lower.match(/\b(competitive (salary|compensation|benefits)|great (culture|team|opportunity)|dynamic (team|environment)|collaborative (team|environment)|exciting opportunity)\b/gi) || []).length;
+  const brandVoiceSignals = {
+    lowJargon:        jargonCount < 3,
+    minimalGeneric:   genericCount < 2,
+    humanNarrative:   /\b(we believe|our team|we('re| are) building|the challenge (is|we face)|our (mission|vision|approach|values))\b/i.test(lower),
+    specificCulture:  /\b(we (move fast|ship|iterate|debate|disagree|value|prioritize|care about)|our (process|principles|way of working))\b/i.test(lower),
+    goodLength:       wordCount >= 200 && wordCount <= 800,
+  };
+  const brandVoiceCount = Object.values(brandVoiceSignals).filter(Boolean).length;
+  const brandVoiceScore = brandVoiceCount >= 4 ? 5 : brandVoiceCount >= 3 ? 4 : brandVoiceCount >= 2 ? 3 : brandVoiceCount >= 1 ? 2 : 1;
 
-  const score = Math.round(
-    (signals.compensation    ? w.compensation    : 0) +
-    (signals.locationClarity ? w.locationClarity : 0) +
-    (signals.employmentType  ? w.employmentType  : 0) +
-    (wordCountScore * w.wordCount) +
-    (signals.answerFirst     ? w.answerFirst     : 0) +
-    (signals.reqVsResp       ? w.reqVsResp       : 0) +
-    (signals.benefitsSignals ? w.benefitsSignals : 0) +
-    (signals.readability     ? w.readability     : 0)
-  );
+  // ── Sub-dimension 6: Candidate Self-Assessment ─────────────────────────────
+  const selfAssessSignals = {
+    reqVsPreferred:   sectionDetail.required?.found && sectionDetail.preferred?.found,
+    youAreFraming:    /\b(you are|you bring|you have|you('ve| have) (built|led|managed|shipped)|you thrive|you('re| are) excited)\b/i.test(lower),
+    fitIndicators:    /\b(this role (is|isn'?t) for you|you('ll| will) (thrive|excel|succeed)|if you (are|have|love|enjoy))\b/i.test(lower),
+    transparentExpect:/\b(this is (hard|challenging|demanding)|be prepared|you should expect|this role requires)\b/i.test(lower),
+    selfSelectLang:   /\b(if you('re| are) (the type|someone who)|you might be a (good |great |strong |perfect )?fit|does this (sound|resonate))\b/i.test(lower),
+  };
+  const selfAssessCount = Object.values(selfAssessSignals).filter(Boolean).length;
+  const selfAssessScore = selfAssessCount >= 4 ? 5 : selfAssessCount >= 3 ? 4 : selfAssessCount >= 2 ? 3 : selfAssessCount >= 1 ? 2 : 1;
+
+  // ── Totals ─────────────────────────────────────────────────────────────────
+  const totalScore = metadataScore + structuralScore + specificityScore + roleClarityScore + brandVoiceScore + selfAssessScore;
+  const normalizedScore = Math.round((totalScore / 30) * 100);
+  const interpretation = totalScore >= 25 ? 'Excellent' : totalScore >= 13 ? 'Improvement needed' : 'Rewrite required';
 
   return {
-    score,
-    signals: {
-      compensation:    { pass: signals.compensation,    weight: w.compensation,    label: 'Compensation transparency' },
-      locationClarity: { pass: signals.locationClarity, weight: w.locationClarity, label: 'Location clarity' },
-      employmentType:  { pass: signals.employmentType,  weight: w.employmentType,  label: 'Employment type' },
-      wordCount:       { pass: wordCountScore >= 0.75,  weight: w.wordCount,       label: 'Word count quality', wordCount },
-      answerFirst:     { pass: signals.answerFirst,     weight: w.answerFirst,     label: 'Answer-first structure' },
-      reqVsResp:       { pass: signals.reqVsResp,       weight: w.reqVsResp,       label: 'Requirements vs. responsibilities' },
-      benefitsSignals: { pass: signals.benefitsSignals, weight: w.benefitsSignals, label: 'Benefits signals' },
-      readability:     { pass: signals.readability,     weight: w.readability,     label: 'Readability' },
+    totalScore,      // out of 30
+    normalizedScore, // out of 100 — use as D2 score
+    interpretation,
+    subDimensions: {
+      metadataClarity:           { score: metadataScore,    label: 'Metadata Clarity',             fieldsFound: metadataFieldsFound, fieldDetail: metadataDetail },
+      structuralClarity:         { score: structuralScore,  label: 'Structural Clarity',           sectionsFound, sectionDetail },
+      specificityQuantification: { score: specificityScore, label: 'Specificity & Quantification', signals: specificitySignals },
+      roleClarity:               { score: roleClarityScore, label: 'Role Clarity',                 signals: roleClaritySignals },
+      brandVoiceAuthenticity:    { score: brandVoiceScore,  label: 'Brand Voice & Authenticity',   jargonCount, genericCount, signals: brandVoiceSignals },
+      candidateSelfAssessment:   { score: selfAssessScore,  label: 'Candidate Self-Assessment',    signals: selfAssessSignals },
     },
-    wordCount
+    wordCount,
   };
 }
 
@@ -736,7 +772,7 @@ app.post('/audit', async (req, res) => {
     const jobSchema = findJobPostingSchema(jsonldBlocks);
     const schemaAudit = auditJobPostingSchema(jobSchema);
     const contentPreview = extractVisibleText(result.html);
-    const d3Score = scoreJobPostingContent(contentPreview);
+    const d2Score = scoreD2JDContent(contentPreview);
     return {
       url: urls[i],
       fetchSuccess: true,
@@ -744,7 +780,7 @@ app.post('/audit', async (req, res) => {
       hasJobPostingSchema: !!jobSchema,
       schemaAudit,
       contentPreview,
-      d3Score,
+      d2Score,
       allSchemaTypes: jsonldBlocks.filter(b => !b.parseError).map(b => b['@type'] || (b['@graph'] ? '@graph' : 'unknown'))
     };
   });
@@ -822,21 +858,47 @@ Apply these weights when calculating the composite score. Reference the tier in 
 
   // ── CLAUDE PROMPT CONTEXTS ────────────────────────────────────────────────
 
-  const d3ScoredPages = jobAudits.filter(j => j.fetchSuccess && j.d3Score);
-  const d3Context = d3ScoredPages.length > 0
-    ? `D3 STRUCTURED CONTENT SCORES AVAILABLE: ${d3ScoredPages.length} job page(s) were scored by the Cassillon D3 engine.
-${d3ScoredPages.map(j => {
-  const s = j.d3Score;
-  const gaps = Object.entries(s.signals).filter(([,v]) => !v.pass).map(([,v]) => v.label);
-  const passes = Object.entries(s.signals).filter(([,v]) => v.pass).map(([,v]) => v.label);
-  return `- ${j.url}
-  Score: ${s.score}/100 | Word count: ${s.wordCount}
-  Passing: ${passes.length > 0 ? passes.join(', ') : 'none'}
-  Failing: ${gaps.length > 0 ? gaps.join(', ') : 'none'}`;
+  // D1 context: schema audit + robots.txt + sitemap (all feed D1 per V2 spec)
+  const d1RobotsContext = robotsAudit.found
+    ? `robots.txt: found. Blocks all crawlers: ${robotsAudit.blocksAll}. Blocks job paths: ${robotsAudit.blocksJobs}. Sitemap directive present: ${robotsAudit.hasSitemapDirective}.${robotsAudit.issues.length > 0 ? ' Issues: ' + robotsAudit.issues.join('; ') : ''}`
+    : `robots.txt: not found or unreachable.`;
+  const d1SitemapContext = sitemapAudit.found
+    ? `sitemap.xml: found. URLs: ${sitemapAudit.urlCount}. Includes job URLs: ${sitemapAudit.hasJobUrls}. Has lastmod dates: ${sitemapAudit.hasLastmod}.${sitemapAudit.issues.length > 0 ? ' Issues: ' + sitemapAudit.issues.join('; ') : ''}`
+    : `sitemap.xml: not found or unreachable.`;
+
+  // D2 context: JD sub-protocol scores
+  const d2ScoredPages = jobAudits.filter(j => j.fetchSuccess && j.d2Score);
+  const d2AvgScore = d2ScoredPages.length > 0
+    ? Math.round(d2ScoredPages.reduce((sum, j) => sum + j.d2Score.normalizedScore, 0) / d2ScoredPages.length)
+    : null;
+
+  const d2Context = d2ScoredPages.length > 0
+    ? `D2 CONTENT READINESS — UTP JD SUB-PROTOCOL SCORES: ${d2ScoredPages.length} job page(s) scored.
+${d2ScoredPages.map(j => {
+  const s = j.d2Score;
+  const sd = s.subDimensions;
+  const missingFields = sd.metadataClarity?.fieldDetail
+    ? Object.values(sd.metadataClarity.fieldDetail).filter(f => !f.found).map(f => f.label)
+    : [];
+  const missingSections = sd.structuralClarity?.sectionDetail
+    ? Object.values(sd.structuralClarity.sectionDetail).filter(f => !f.found).map(f => f.label)
+    : [];
+  return `URL: ${j.url}
+  JD Score: ${s.totalScore}/30 (${s.normalizedScore}/100) — ${s.interpretation}
+  Sub-dimension scores (each out of 5):
+    1. Metadata Clarity: ${sd.metadataClarity?.score}/5 — ${sd.metadataClarity?.fieldsFound}/10 UTP fields detected${missingFields.length > 0 ? '. Missing: ' + missingFields.join(', ') : ''}
+    2. Structural Clarity: ${sd.structuralClarity?.score}/5 — ${sd.structuralClarity?.sectionsFound}/7 UTP sections detected${missingSections.length > 0 ? '. Missing: ' + missingSections.join(', ') : ''}
+    3. Specificity & Quantification: ${sd.specificityQuantification?.score}/5
+    4. Role Clarity: ${sd.roleClarity?.score}/5
+    5. Brand Voice & Authenticity: ${sd.brandVoiceAuthenticity?.score}/5 (jargon count: ${sd.brandVoiceAuthenticity?.jargonCount})
+    6. Candidate Self-Assessment: ${sd.candidateSelfAssessment?.score}/5
+  Word count: ${s.wordCount}`;
 }).join('\n')}
-The D3 dimension score should be the average of these per-URL scores: ${Math.round(d3ScoredPages.reduce((sum, j) => sum + j.d3Score.score, 0) / d3ScoredPages.length)}/100.
-Reference specific signal failures in D3 findings. perUrlScores must reflect the actual scores above.`
-    : `D3 DATA: No job URLs provided or pages could not be fetched. Score D3 as inferred based on domain/brand knowledge only.`;
+
+The D2 score should be the average of these normalized scores: ${d2AvgScore}/100.
+Reference the UTP 7-step fix methodology in D2 recommendations when totalScore < 25.
+Call out specific missing metadata fields and sections by name in D2 findings.`
+    : `D2 DATA: No job URLs provided or pages could not be fetched. Score D2 as inferred from domain/brand knowledge only.`;
 
   const gscContext = gscData.connected && gscData.siteUrl
     ? `GSC DATA AVAILABLE: Real Google Search Console data has been pulled for ${gscData.siteUrl}.
@@ -851,7 +913,7 @@ Use this data to give precise, accurate D1 and D2 scores. Reference specific imp
   let d4Context;
   if (redditResult.success && redditResult.totalMentions > 0) {
     const { positive, negative, neutral } = redditResult.sentimentBreakdown;
-    d4Context = `D4 REAL DATA — REDDIT EMPLOYER BRAND SIGNALS:
+    d4Context = `D3 + D4 REAL DATA — REDDIT BRAND SIGNALS (feeds both Brand Signal Assessment and Continuity Indicator):
 Reddit mentions found: ${redditResult.totalMentions}
 Subreddits: ${redditResult.subredditsFound.join(', ') || 'none identified'}
 Sentiment breakdown: ${positive} positive, ${negative} negative, ${neutral} neutral/mixed
@@ -867,20 +929,21 @@ ${redditResult.topSignals.map(s => {
   return '';
 }).join('\n')}
 
-Suggested D4 score based on Reddit signals: ${d4Score ? d4Score.suggestedScore : 'N/A'}/100
-You may adjust this score up or down based on additional context (industry norms, brand size, recency of posts, etc.).
-The D4 dataSource field should be set to "reddit+real".
-Reference specific post titles or subreddits in D4 findings.`;
+Suggested D3 (Brand Signal Assessment) score based on Reddit signals: ${d4Score ? d4Score.suggestedScore : 'N/A'}/100
+You may adjust up or down based on industry norms, brand size, and recency.
+For D4 (Continuity Indicator): use Reddit sentiment vs. career site owned content as a theme-level continuity signal. Describe any divergence descriptively, not prosecutorially.
+Set dataSource to "reddit+real" for both D3 and D4.
+Reference specific post titles or subreddits in D3 findings.`;
 
   } else if (redditResult.success && redditResult.totalMentions === 0) {
-    d4Context = `D4 REDDIT DATA: Reddit was searched successfully but no mentions of "${brand}" were found.
-This may indicate the brand is small, niche, or not discussed publicly on Reddit.
-Suggested D4 score: 45/100 (neutral baseline — absence of negative signal is not inherently bad).
-Set D4 dataSource to "reddit+real" and note the absence of Reddit presence in findings.`;
+    d4Context = `D3 + D4 REDDIT DATA: Reddit searched successfully — no mentions of "${brand}" found.
+Brand may be small, niche, or not publicly discussed.
+Suggested D3 score: 45/100 (neutral baseline). D4: note absence of downstream signal; do not heavily penalize.
+Set dataSource to "reddit+real" for both D3 and D4.`;
 
   } else {
-    d4Context = `D4 DATA: Reddit fetch failed (${redditResult.error || 'unknown error'}). Score D4 as inferred based on brand/domain knowledge only.
-Set D4 dataSource to "inferred".`;
+    d4Context = `D3 + D4 DATA: Reddit fetch failed (${redditResult.error || 'unknown error'}). Score D3 and D4 as inferred from brand/domain knowledge only.
+Set dataSource to "inferred" for both D3 and D4.`;
   }
 
  const d5Context = (selectedATS && selectedATS.length > 0)
@@ -903,7 +966,11 @@ ${tierContext}
 
 ${gscContext}
 
-${d3Context}
+D1 CRAWLER ACCESS DATA (feeds D1 score alongside schema audit):
+${d1RobotsContext}
+${d1SitemapContext}
+
+${d2Context}
 
 ${d4Context}
 
@@ -938,37 +1005,37 @@ Return ONLY valid JSON
       "name": "Schema Integrity",
       "score": 0-100,
       "colorClass": "blue",
-      "findings": ["specific finding referencing real schema and GSC data", "finding 2", "finding 3"],
+      "findings": ["specific finding referencing schema audit, robots.txt, sitemap, and GSC data", "finding 2", "finding 3"],
       "dataSource": "${gscData.connected && gscData.siteUrl ? 'gsc+real' : 'real'}"
     },
     {
       "id": "D2",
-      "name": "Career Site Hygiene",
+      "name": "Content Readiness",
       "score": 0-100,
       "colorClass": "teal",
-      "findings": ["specific finding referencing real robots.txt/sitemap and GSC coverage data", "finding 2", "finding 3"],
-      "dataSource": "${gscData.connected && gscData.siteUrl ? 'gsc+real' : 'real'}"
+      "findings": ["specific finding naming missing UTP metadata fields or sections from the sub-protocol scores", "finding 2", "finding 3"],
+      "dataSource": "${d2ScoredPages.length > 0 ? 'real' : 'inferred'}",
+      "perUrlScores": [{"url": "string", "score": 0-100, "totalOutOf30": 0-30, "interpretation": "Excellent|Improvement needed|Rewrite required", "topGaps": ["sub-dimension name or missing field"]}]
     },
     {
       "id": "D3",
-      "name": "Job Posting Content",
+      "name": "Brand Signal Assessment",
       "score": 0-100,
       "colorClass": "amber",
-      "findings": ["specific finding referencing the per-URL D3 scores and signal breakdowns", "finding 2", "finding 3"],
-      "dataSource": "${urls.length > 0 ? 'real' : 'inferred'}",
-      "perUrlScores": [{"url": "string", "score": 0-100, "topGaps": ["signal that failed"]}]
-    },
-    {
-      "id": "D4",
-      "name": "Employer Brand Signals",
-      "score": 0-100,
-      "colorClass": "purple",
       "findings": ["finding referencing real Reddit data — specific post titles, subreddits, or sentiment counts", "finding 2", "finding 3"],
       "dataSource": "${redditResult.success ? 'reddit+real' : 'inferred'}"
     },
     {
+      "id": "D4",
+      "name": "Continuity Indicator",
+      "score": 0-100,
+      "colorClass": "purple",
+      "findings": ["descriptive theme-level continuity finding — not prosecutorial", "finding 2", "finding 3"],
+      "dataSource": "${redditResult.success ? 'reddit+real' : 'inferred'}"
+    },
+    {
       "id": "D5",
-      "name": "Distribution Coverage",
+      "name": "Distribution & Agentic Readiness",
       "score": 0-100,
       "colorClass": "red",
       "findings": ["finding 1", "finding 2", "finding 3"],

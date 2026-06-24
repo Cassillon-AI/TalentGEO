@@ -877,7 +877,7 @@
       </div>
       <div class="audit-step" id="step-4">
         <div class="step-icon" id="step-icon-4">5</div>
-        <div><div class="step-label">Distribution Coverage Check</div><div class="step-desc">Google for Jobs, ATS feed, LLM source indexing</div></div>
+        <div><div class="step-label">Distribution & Agentic Readiness Check</div><div class="step-desc">Google for Jobs, ATS feed, LLM source indexing</div></div>
       </div>
       <div class="audit-step" id="step-5">
         <div class="step-icon" id="step-icon-5">✦</div>
@@ -902,7 +902,7 @@
         <div class="score-num" id="report-score">—</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <div class="score-grade" id="score-grade"></div>
-          <div class="tooltip-wrap" data-tooltip="Composite score weighted across 5 dimensions: D1 Schema Integrity (25%), D2 Career Site Hygiene (20%), D3 Job Posting Content (20%), D4 Employer Brand Signals (20%), D5 Distribution Coverage (15%). Scores are based on live data fetched from your career site, job postings, and public signals. Tiers: 0–25 Critical · 26–50 Developing · 51–75 Established · 76–100 Leading." style="cursor:help;">
+          <div class="tooltip-wrap" data-tooltip="Composite score weighted across 5 dimensions (weights vary by company tier): D1 Schema Integrity · D2 Content Readiness · D3 Brand Signal Assessment · D4 Continuity Indicator · D5 Distribution &amp; Agentic Readiness. Scores are based on live data fetched from your career site, job postings, and public signals. Tiers: 0–25 Critical · 26–50 Developing · 51–75 Established · 76–100 Leading." style="cursor:help;">
             <span style="font-size:13px;color:var(--ink3);border:1px solid var(--ink3);border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;">ⓘ</span>
           </div>
         </div>
@@ -1443,10 +1443,10 @@
       },
       dimensions: [
         { id:'D1', name:'Schema Integrity', score:22, colorClass:'blue', dataSource:'inferred', findings:['Backend unreachable — schema data unavailable','Re-run the audit to get live schema findings','Contact Cassillon if the problem persists'] },
-        { id:'D2', name:'Career Site Hygiene', score:45, colorClass:'teal', dataSource:'inferred', findings:['Backend unreachable — crawlability data unavailable','robots.txt and sitemap could not be checked','Re-run the audit to get live findings'] },
-        { id:'D3', name:'Job Posting Content', score:31, colorClass:'amber', dataSource:'inferred', findings:['Job posting URLs could not be fetched','Content analysis unavailable','Re-run the audit with job posting URLs provided'] },
-        { id:'D4', name:'Employer Brand Signals', score:52, colorClass:'purple', dataSource:'inferred', findings:['Employer brand signals could not be retrieved','Re-run the audit to get live findings','Contact Cassillon for a manual audit'] },
-        { id:'D5', name:'Distribution Coverage', score:38, colorClass:'red', dataSource:'inferred', findings:['Distribution data unavailable','Re-run the audit to check Google for Jobs presence','Contact Cassillon for a manual audit'] }
+        { id:'D2', name:'Content Readiness', score:45, colorClass:'teal', dataSource:'inferred', findings:['Backend unreachable — JD content data unavailable','Job description sub-protocol could not be scored','Re-run the audit to get live findings'] },
+        { id:'D3', name:'Brand Signal Assessment', score:31, colorClass:'amber', dataSource:'inferred', findings:['Brand signal data could not be retrieved','Reddit and external signals unavailable','Re-run the audit to get live findings'] },
+        { id:'D4', name:'Continuity Indicator', score:52, colorClass:'purple', dataSource:'inferred', findings:['Continuity data could not be assessed','Re-run the audit to get live findings','Contact Cassillon for a manual audit'] },
+        { id:'D5', name:'Distribution & Agentic Readiness', score:38, colorClass:'red', dataSource:'inferred', findings:['Distribution data unavailable','Re-run the audit to check Google for Jobs presence','Contact Cassillon for a manual audit'] }
       ],
       internalActions: [
         { title:'Re-run the audit', description:'The backend was unreachable. Try again — if the problem persists, contact Cassillon.', effort:'Low', impact:'High', dimension:'D1' },
