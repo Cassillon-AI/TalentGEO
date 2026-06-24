@@ -292,6 +292,23 @@ function extractJSONLD(html) {
   return blocks;
 }
 
+function findOrganizationSchema(blocks) {
+  const orgTypes = new Set(['Organization', 'Corporation', 'LocalBusiness']);
+  for (const block of blocks) {
+    if (!block || block.parseError) continue;
+    if (block['@graph']) {
+      const org = block['@graph'].find(item => item && orgTypes.has(item['@type']));
+      if (org) return org;
+    }
+    if (orgTypes.has(block['@type'])) return block;
+    if (Array.isArray(block)) {
+      const org = block.find(item => item && orgTypes.has(item['@type']));
+      if (org) return org;
+    }
+  }
+  return null;
+}
+
 function findJobPostingSchema(blocks) {
   for (const block of blocks) {
     if (!block || block.parseError) continue;
@@ -335,8 +352,27 @@ function auditJobPostingSchema(schema) {
   return { present: true, fields, score, gaps, schemaType: schema['@type'] };
 }
 
+function auditPageMeta(html) {
+  if (!html) return { canonical: false, metaTitle: false, metaDescription: false, ogTags: false, hreflang: false };
+  return {
+    canonical: /<link[^>]+rel=["']canonical["']/i.test(html),
+    metaTitle: /<title[^>]*>[^<]+<\/title>/i.test(html),
+    metaDescription: /<meta[^>]+name=["']description["']/i.test(html),
+    ogTags: /<meta[^>]+property=["']og:/i.test(html),
+    hreflang: /<link[^>]+hreflang=/i.test(html)
+  };
+}
+
 // LLM crawler user-agent strings to check for explicit blocks in robots.txt
 const LLM_BOT_AGENTS = ['gptbot', 'claude-web', 'claudebot', 'anthropic-ai', 'perplexitybot', 'cohere-ai'];
+
+// D1 tier-specific category weights per UTP V2 spec §3.1
+const D1_CATEGORY_WEIGHTS = {
+  1: { core: 1.00, enhanced: 0.00, advanced: 0.00 },
+  2: { core: 0.70, enhanced: 0.30, advanced: 0.00 },
+  3: { core: 0.50, enhanced: 0.30, advanced: 0.20 },
+  4: { core: 0.40, enhanced: 0.30, advanced: 0.30 },
+};
 
 function auditRobotsTxt(text, domain) {
   if (!text) return { found: false, issues: ['robots.txt not found or unreachable'] };
@@ -395,6 +431,89 @@ function auditSitemap(text) {
   if (urlCount === 0) issues.push('Sitemap appears empty or malformed');
 
   return { found: true, urlCount, hasJobUrls, hasLastmod, issues };
+}
+
+function computeD1CategoryScores(jobAudits, careerSiteBlocks, tierResult) {
+  const tier = tierResult?.tier || 2;
+  const weights = D1_CATEGORY_WEIGHTS[tier];
+  const ok = s => s ? '✓' : '✗';
+
+  const successAudits = jobAudits.filter(j => j.fetchSuccess && j.schemaAudit);
+
+  // ── CORE MARKERS ─────────────────────────────────────────────────────────
+  const hasJobPosting = successAudits.some(j => j.schemaAudit.present);
+  const hasJSONLD = successAudits.some(j => j.jsonldBlockCount > 0);
+  const rf = ['title', 'description', 'datePosted', 'hiringOrganization', 'jobLocation'];
+  const rfPresence = Object.fromEntries(rf.map(f => [f, successAudits.some(j => j.schemaAudit.present && j.schemaAudit.fields[f]?.present)]));
+  const hasCanonical = successAudits.some(j => j.pageMeta?.canonical);
+  const hasMetaTags = successAudits.some(j => j.pageMeta?.metaTitle || j.pageMeta?.metaDescription || j.pageMeta?.ogTags);
+  const hasOrgSchema = !!findOrganizationSchema(careerSiteBlocks);
+
+  const coreChecks = {
+    jobPostingPresent: hasJobPosting,
+    jsonLDFormat: hasJSONLD,
+    fieldTitle: rfPresence.title,
+    fieldDescription: rfPresence.description,
+    fieldDatePosted: rfPresence.datePosted,
+    fieldHiringOrganization: rfPresence.hiringOrganization,
+    fieldJobLocation: rfPresence.jobLocation,
+    canonicalUrl: hasCanonical,
+    metaTags: hasMetaTags,
+    organizationSchema: hasOrgSchema,
+  };
+  const corePassed = Object.values(coreChecks).filter(Boolean).length;
+  const coreTotal = Object.keys(coreChecks).length;
+  const coreRate = coreTotal ? corePassed / coreTotal : 0;
+
+  // ── ENHANCED MARKERS ──────────────────────────────────────────────────────
+  const ef = ['baseSalary', 'employmentType', 'validThrough', 'applicantLocationRequirements'];
+  const efPresence = Object.fromEntries(ef.map(f => [f, successAudits.some(j => j.schemaAudit.present && j.schemaAudit.fields[f]?.present)]));
+  const hasBreadcrumb = careerSiteBlocks.some(b => {
+    if (!b || b.parseError) return false;
+    if (b['@type'] === 'BreadcrumbList') return true;
+    return b['@graph']?.some(item => item?.['@type'] === 'BreadcrumbList') || false;
+  });
+
+  const enhancedChecks = { ...efPresence, breadcrumbList: hasBreadcrumb };
+  const enhancedPassed = Object.values(enhancedChecks).filter(Boolean).length;
+  const enhancedTotal = Object.keys(enhancedChecks).length;
+  const enhancedRate = enhancedTotal ? enhancedPassed / enhancedTotal : 0;
+
+  // ── ADVANCED MARKERS ──────────────────────────────────────────────────────
+  const hasHreflang = successAudits.some(j => j.pageMeta?.hreflang);
+  const hasApplyAction = careerSiteBlocks.some(b => {
+    if (!b || b.parseError) return false;
+    if (b['@type'] === 'ApplyAction') return true;
+    return b['@graph']?.some(item => item?.['@type'] === 'ApplyAction') || false;
+  });
+
+  const advancedChecks = { hreflang: hasHreflang, applyActionMarkup: hasApplyAction };
+  const advancedPassed = Object.values(advancedChecks).filter(Boolean).length;
+  const advancedTotal = Object.keys(advancedChecks).length;
+  const advancedRate = advancedTotal ? advancedPassed / advancedTotal : 0;
+
+  const suggestedScore = Math.round((coreRate * weights.core + enhancedRate * weights.enhanced + advancedRate * weights.advanced) * 100);
+  const noUrls = successAudits.length === 0;
+
+  const lines = [
+    `D1 SCHEMA INTEGRITY — CATEGORY-WEIGHTED AUDIT`,
+    `T${tier}: Core ${Math.round(weights.core*100)}% / Enhanced ${Math.round(weights.enhanced*100)}% / Advanced ${Math.round(weights.advanced*100)}%`,
+    ``,
+    `CORE (${corePassed}/${coreTotal} = ${Math.round(coreRate*100)}%) × ${Math.round(weights.core*100)}% weight:`,
+    `  JobPosting schema: ${ok(hasJobPosting)} · JSON-LD format: ${ok(hasJSONLD)}`,
+    `  Required fields: title ${ok(rfPresence.title)} · description ${ok(rfPresence.description)} · datePosted ${ok(rfPresence.datePosted)} · hiringOrganization ${ok(rfPresence.hiringOrganization)} · jobLocation ${ok(rfPresence.jobLocation)}`,
+    `  Canonical URL: ${ok(hasCanonical)} · Meta tags (title/desc/og:*): ${ok(hasMetaTags)} · Organization schema: ${ok(hasOrgSchema)}`,
+    ``,
+    `ENHANCED (${enhancedPassed}/${enhancedTotal} = ${Math.round(enhancedRate*100)}%) × ${Math.round(weights.enhanced*100)}% weight:`,
+    `  baseSalary: ${ok(efPresence.baseSalary)} · employmentType: ${ok(efPresence.employmentType)} · validThrough: ${ok(efPresence.validThrough)} · applicantLocationRequirements: ${ok(efPresence.applicantLocationRequirements)} · BreadcrumbList: ${ok(hasBreadcrumb)}`,
+    ``,
+    `ADVANCED (${advancedPassed}/${advancedTotal} = ${Math.round(advancedRate*100)}%) × ${Math.round(weights.advanced*100)}% weight:`,
+    `  hreflang: ${ok(hasHreflang)} · ApplyAction markup: ${ok(hasApplyAction)}`,
+    ``,
+    `SUGGESTED D1 SCORE: ${suggestedScore}/100${noUrls ? ' (no job URLs provided — schema markers N/A; score based on career site only)' : ''}`,
+  ];
+
+  return { suggestedScore, noUrls, summary: lines.join('\n') };
 }
 
 function extractVisibleText(html) {
@@ -702,6 +821,7 @@ app.post('/audit', async (req, res) => {
   const d4Score = scoreD4Sentiment(redditResult);
 
   const careerSiteText = careerSiteResult.success ? extractVisibleText(careerSiteResult.html) : null;
+  const careerSiteBlocks = extractJSONLD(careerSiteResult.html || '');
   const d2CareerScore = careerSiteText ? scoreD2CareerSiteContent(careerSiteText) : null;
 
   const jobAudits = jobPageResults.map((result, i) => {
@@ -711,6 +831,7 @@ app.post('/audit', async (req, res) => {
     const jsonldBlocks = extractJSONLD(result.html);
     const jobSchema = findJobPostingSchema(jsonldBlocks);
     const schemaAudit = auditJobPostingSchema(jobSchema);
+    const pageMeta = auditPageMeta(result.html);
     const contentPreview = extractVisibleText(result.html);
     const d2Score = scoreD2JDContent(contentPreview);
     return {
@@ -719,6 +840,7 @@ app.post('/audit', async (req, res) => {
       jsonldBlockCount: jsonldBlocks.length,
       hasJobPostingSchema: !!jobSchema,
       schemaAudit,
+      pageMeta,
       contentPreview,
       d2Score,
       allSchemaTypes: jsonldBlocks.filter(b => !b.parseError).map(b => b['@type'] || (b['@graph'] ? '@graph' : 'unknown'))
@@ -801,13 +923,19 @@ Apply these weights when calculating the composite score. Reference the tier in 
 
   // ── CLAUDE PROMPT CONTEXTS ────────────────────────────────────────────────
 
-  // D1 context: schema audit + robots.txt + sitemap (all feed D1 per V2 spec)
-  const d1RobotsContext = robotsAudit.found
-    ? `robots.txt: found. Blocks all crawlers: ${robotsAudit.blocksAll}. Blocks job paths: ${robotsAudit.blocksJobs}. Sitemap directive present: ${robotsAudit.hasSitemapDirective}.${robotsAudit.issues.length > 0 ? ' Issues: ' + robotsAudit.issues.join('; ') : ''}`
+  // D1 context: tier-weighted category audit + robots.txt + sitemap
+  const d1Scores = computeD1CategoryScores(jobAudits, careerSiteBlocks, tierResult);
+  const d1RobotsLine = robotsAudit.found
+    ? `robots.txt: found. Blocks all: ${robotsAudit.blocksAll}. Blocks job paths: ${robotsAudit.blocksJobs}. Sitemap directive: ${robotsAudit.hasSitemapDirective}.${robotsAudit.issues.length > 0 ? ' Issues: ' + robotsAudit.issues.join('; ') : ''}`
     : `robots.txt: not found or unreachable.`;
-  const d1SitemapContext = sitemapAudit.found
-    ? `sitemap.xml: found. URLs: ${sitemapAudit.urlCount}. Includes job URLs: ${sitemapAudit.hasJobUrls}. Has lastmod dates: ${sitemapAudit.hasLastmod}.${sitemapAudit.issues.length > 0 ? ' Issues: ' + sitemapAudit.issues.join('; ') : ''}`
+  const d1SitemapLine = sitemapAudit.found
+    ? `sitemap.xml: found. URLs: ${sitemapAudit.urlCount}. Includes job URLs: ${sitemapAudit.hasJobUrls}. Has lastmod: ${sitemapAudit.hasLastmod}.${sitemapAudit.issues.length > 0 ? ' Issues: ' + sitemapAudit.issues.join('; ') : ''}`
     : `sitemap.xml: not found or unreachable.`;
+  const d1Context = `${d1Scores.summary}
+
+CRAWLER ACCESS (also feeds D1):
+${d1RobotsLine}
+${d1SitemapLine}`;
 
   // D2 context: JD sub-protocol (60%) + career site sub-protocol (40%) composite
   const d2ScoredPages = jobAudits.filter(j => j.fetchSuccess && j.d2Score);
@@ -949,9 +1077,7 @@ OUTPUT DISCIPLINE: Keep each finding to one concise sentence. Keep recommendatio
 
 ${tierContext}
 
-D1 CRAWLER ACCESS DATA (feeds D1 score alongside schema audit):
-${d1RobotsContext}
-${d1SitemapContext}
+${d1Context}
 
 ${d2Context}
 
