@@ -785,11 +785,15 @@ app.post('/audit', async (req, res) => {
     };
   });
 
+  // Strip verbose d2Score and contentPreview from jobPages before sending to Claude —
+  // d2Context already has all the formatted D2 data Claude needs; no need to duplicate.
+  const jobPagesForPrompt = jobAudits.map(({ d2Score, contentPreview, ...rest }) => rest);
+
   const realDataSummary = {
     domain: baseUrl,
     robotsTxt: robotsAudit,
     sitemap: sitemapAudit,
-    jobPages: jobAudits,
+    jobPages: jobPagesForPrompt,
     urlsProvided: urls.length,
     gsc: gscData,
     reddit: {
@@ -1013,9 +1017,9 @@ Return ONLY valid JSON
       "name": "Content Readiness",
       "score": 0-100,
       "colorClass": "teal",
-      "findings": ["specific finding naming missing UTP metadata fields or sections from the sub-protocol scores", "finding 2", "finding 3"],
+      "findings": ["1-sentence finding citing the lowest-scoring sub-dimension and top gap", "finding 2", "finding 3"],
       "dataSource": "${d2ScoredPages.length > 0 ? 'real' : 'inferred'}",
-      "perUrlScores": [{"url": "string", "score": 0-100, "totalOutOf30": 0-30, "interpretation": "Excellent|Improvement needed|Rewrite required", "topGaps": ["sub-dimension name or missing field"]}]
+      "perUrlScores": [{"url": "string", "score": 0-100, "topGaps": ["up to 3 missing fields or sub-dimensions"]}]
     },
     {
       "id": "D3",
