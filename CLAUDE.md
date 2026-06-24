@@ -9,7 +9,8 @@ Database: Cloud SQL (Postgres 15) on GCP, connected via Cloud SQL Auth Proxy.
 ## Build & Run Commands
 # Backend (local dev)
 cd backend && npm install
-ANTHROPIC_API_KEY=sk-ant-YOUR_KEY DATABASE_URL=postgresql://talentgeo_app:PASSWORD@localhost:5432/talentgeo node server.js
+# Set ANTHROPIC_API_KEY and DATABASE_URL from Secret Manager, then:
+node server.js
 # Backend runs on http://localhost:8080
 
 # Frontend (local dev)
