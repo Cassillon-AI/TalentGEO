@@ -529,6 +529,113 @@ function scoreD2JDContent(text) {
   };
 }
 
+// ─── D2 CAREER SITE SUB-PROTOCOL SCORING ─────────────────────────────────────
+// Sub-Protocol 2: scores the main career site page against 6 adapted sub-dimensions.
+// Same 1–5 per sub-dimension / max 30 / normalized to 100 structure as the JD sub-protocol.
+
+function scoreD2CareerSiteContent(text) {
+  if (!text || text.trim().length === 0) {
+    return { totalScore: 5, normalizedScore: 17, subDimensions: {}, note: 'No career site content available' };
+  }
+
+  const lower = text.toLowerCase();
+  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+
+  // ── Sub-dimension 1: Company Info Completeness ─────────────────────────────
+  const companyInfoSignals = {
+    missionStatement:    /\b(our mission|mission statement|we exist to|our purpose|what we do|why we exist)\b/i.test(lower),
+    valuesPresent:       /\b(our values|core values|we believe|what we stand for|our principles)\b/i.test(lower),
+    teamSizeInfo:        /\b(\d+\s*(employees?|people|team members?)|team of \d+|\d+[\s-]person)\b/i.test(lower),
+    officeLocations:     /\b(headquartered in|offices? in|based in|remote.?first|distributed team)\b/i.test(lower),
+    companyHistory:      /\b(founded in \d{4}|since \d{4}|started in \d{4}|\d+ years? (ago|old|of experience))\b/i.test(lower),
+    cultureDescription:  /\b(our culture|work environment|how we work|the way we work|life at)\b/i.test(lower),
+    benefitsOverview:    /\b(benefits?|perks?|health insurance|401k|pto|vacation|flexible|equity|stock options?)\b/i.test(lower),
+    leadershipMentioned: /\b(leadership team|our (leaders?|executives?|founders?)|ceo|cto|cpo|founded by)\b/i.test(lower),
+    diversityCommitment: /\b(diversity|inclusion|belonging|dei|equal opportunity)\b/i.test(lower),
+    fundingOrStage:      /\b(backed by|series [abcde]|funded|venture|raised \$|vc.backed|investors?)\b/i.test(lower),
+  };
+  const companyInfoCount = Object.values(companyInfoSignals).filter(Boolean).length;
+  const companyInfoScore = companyInfoCount >= 8 ? 5 : companyInfoCount >= 6 ? 4 : companyInfoCount >= 4 ? 3 : companyInfoCount >= 2 ? 2 : 1;
+
+  // ── Sub-dimension 2: Structural Clarity ───────────────────────────────────
+  const structureSignals = {
+    aboutSection:    /\b(about us|our story|who we are)\b/i.test(lower),
+    cultureSection:  /\b(culture|life at|working at|our team)\b/i.test(lower),
+    benefitsSection: /\b(benefits?|perks?|what we offer|total rewards)\b/i.test(lower),
+    missionSection:  /\b(mission|vision|purpose|what we('re| are) building)\b/i.test(lower),
+    teamSection:     /\b(meet the team|our people|leadership|who you('ll| will) work with)\b/i.test(lower),
+    valuesSection:   /\b(our values|core values|principles|what we stand for)\b/i.test(lower),
+    careersSection:  /\b(join us|join the team|open roles?|we('re| are) hiring|work with us)\b/i.test(lower),
+  };
+  const structureCount = Object.values(structureSignals).filter(Boolean).length;
+  const structureScore = structureCount >= 6 ? 5 : structureCount >= 4 ? 4 : structureCount >= 3 ? 3 : structureCount >= 1 ? 2 : 1;
+
+  // ── Sub-dimension 3: Specificity & Quantification ─────────────────────────
+  const specificitySignals = {
+    specificHeadcount:    /\b\d{2,4}\+?\s*(employees?|people|team members?)\b/i.test(lower),
+    specificLocations:    /\b\d+\s*(offices?|locations?|cities)\b/i.test(lower),
+    specificBenefits:     /\b(\d+\s*days?\s*(pto|vacation|off)|unlimited pto|\d+%\s*(match|equity)|\$[\d,]+\s*(stipend|allowance))\b/i.test(lower),
+    specificGrowthMetric: /\b(\d+x|\d+%\s*(growth|yoy)|grew from \d|raised \$[\d]+[mb])\b/i.test(lower),
+    specificCustomers:    /\b(\d+\s*(customers?|clients?|companies|enterprises?|users?))\b/i.test(lower),
+    specificFunding:      /\$[\d]+(\.\d+)?\s*(m|b|million|billion)\b/i.test(lower),
+  };
+  const specificityCount = Object.values(specificitySignals).filter(Boolean).length;
+  const specificityScore = specificityCount >= 5 ? 5 : specificityCount >= 3 ? 4 : specificityCount >= 2 ? 3 : specificityCount >= 1 ? 2 : 1;
+
+  // ── Sub-dimension 4: EVP Clarity (Employer Value Proposition) ─────────────
+  const evpSignals = {
+    whyWorkHere:      /\b(why (join|work (at|for|with)|work here)|what makes (us|[a-z]+ )?(different|unique|special))\b/i.test(lower),
+    growthOpportunity:/\b(grow (your career|professionally|with us)|career (growth|development|path)|learning (opportunities?|culture)|mentorship)\b/i.test(lower),
+    impactLanguage:   /\b(make (an )?impact|meaningful work|real impact|change the (world|industry)|our (impact|mission) is)\b/i.test(lower),
+    uniquePosition:   /\b(first|only|leading|pioneer|transforming).{0,50}(market|industry|space|category)\b/i.test(lower),
+    workStyleClarity: /\b(async|remote.?first|flexible (hours?|schedule|work)|in.?person|hybrid|distributed)\b/i.test(lower),
+  };
+  const evpCount = Object.values(evpSignals).filter(Boolean).length;
+  const evpScore = evpCount >= 4 ? 5 : evpCount >= 3 ? 4 : evpCount >= 2 ? 3 : evpCount >= 1 ? 2 : 1;
+
+  // ── Sub-dimension 5: Brand Voice & Authenticity ────────────────────────────
+  const genericPhraseCount = (lower.match(/\b(we('re| are) a family|work hard play hard|fast.?paced (startup|environment|culture)|passionate (team|people)|best.?in.?class culture|collaborative environment|innovative (team|company)|exciting (company|team))\b/gi) || []).length;
+  const brandVoiceSignals = {
+    lowGenericLanguage:  genericPhraseCount < 2,
+    specificTeamStories: /\b(our (engineers?|team|people) (build|ship|solve|work on)|team spotlight|employee (story|spotlight))\b/i.test(lower),
+    honestCulture:       /\b(we (debate|disagree|challenge|question)|(hard (problems?|challenges?))|not (for everyone|a fit for everyone)|(honest|candid|transparent) (about|culture))\b/i.test(lower),
+    humanNarrative:      /\b(we (believe|care|think|love)|our (journey|story)|started (because|when|after))\b/i.test(lower),
+    noGenericPhrases:    genericPhraseCount === 0,
+  };
+  const brandVoiceCount = Object.values(brandVoiceSignals).filter(Boolean).length;
+  const brandVoiceScore = brandVoiceCount >= 4 ? 5 : brandVoiceCount >= 3 ? 4 : brandVoiceCount >= 2 ? 3 : brandVoiceCount >= 1 ? 2 : 1;
+
+  // ── Sub-dimension 6: Candidate Self-Assessment Enablement ─────────────────
+  const selfAssessSignals = {
+    cultureFitLanguage:   /\b(if you (thrive|excel|love|enjoy|are (the type|someone who))|you('ll| will) (love|thrive|fit) (if|when|here))\b/i.test(lower),
+    clearValues:          /\b(we (value|believe in|prioritize|care about|stand for) [a-z])/i.test(lower),
+    thrivingConditions:   /\b(to (thrive|succeed|excel) here|what (it takes|you need)|the ideal (teammate|person|hire))\b/i.test(lower),
+    notForEveryone:       /\b(not for everyone|this isn('?t| not) for|(might not|won'?t) be (a fit|right) (if|for))\b/i.test(lower),
+    explicitExpectations: /\b((high (bar|standards?|expectations?))|(demanding|challenging) (environment|work)|(we (expect|ask) a lot))\b/i.test(lower),
+  };
+  const selfAssessCount = Object.values(selfAssessSignals).filter(Boolean).length;
+  const selfAssessScore = selfAssessCount >= 4 ? 5 : selfAssessCount >= 3 ? 4 : selfAssessCount >= 2 ? 3 : selfAssessCount >= 1 ? 2 : 1;
+
+  const totalScore = companyInfoScore + structureScore + specificityScore + evpScore + brandVoiceScore + selfAssessScore;
+  const normalizedScore = Math.round((totalScore / 30) * 100);
+  const interpretation = totalScore >= 25 ? 'Excellent' : totalScore >= 13 ? 'Improvement needed' : 'Rewrite required';
+
+  return {
+    totalScore,
+    normalizedScore,
+    interpretation,
+    subDimensions: {
+      companyInfoCompleteness:   { score: companyInfoScore, label: 'Company Info Completeness',   signalsFound: companyInfoCount, signals: companyInfoSignals },
+      structuralClarity:         { score: structureScore,   label: 'Structural Clarity',          signalsFound: structureCount,  signals: structureSignals },
+      specificityQuantification: { score: specificityScore, label: 'Specificity & Quantification', signals: specificitySignals },
+      evpClarity:                { score: evpScore,         label: 'EVP Clarity',                 signals: evpSignals },
+      brandVoiceAuthenticity:    { score: brandVoiceScore,  label: 'Brand Voice & Authenticity',  genericPhraseCount, signals: brandVoiceSignals },
+      candidateSelfAssessment:   { score: selfAssessScore,  label: 'Candidate Self-Assessment',   signals: selfAssessSignals },
+    },
+    wordCount,
+  };
+}
+
 function normalizeDomain(domain) {
   let d = domain.trim();
   if (!d.startsWith('http')) d = 'https://' + d;
@@ -547,7 +654,7 @@ app.post('/audit', async (req, res) => {
     return res.status(500).json({ error: 'API key not configured' });
   }
 
-  const { domain, brand, industry, context, jobUrls, selectedATS, isOwnCompany, declaredTier } = req.body;
+  const { domain, brand, industry, context, jobUrls, careerUrl, selectedATS, isOwnCompany, declaredTier } = req.body;
 
   if (!domain || !brand) {
     return res.status(400).json({ error: 'domain and brand are required' });
@@ -555,14 +662,16 @@ app.post('/audit', async (req, res) => {
 
   const baseUrl = normalizeDomain(domain);
   const urls = (jobUrls || []).filter(u => u && u.trim().length > 0);
+  const careerSiteFetchUrl = careerUrl?.trim() || baseUrl;
 
   // ── PARALLEL DATA COLLECTION ──────────────────────────────────────────────
   // Reddit runs in parallel with the rest — D4 data arrives at the same time
 
-  const [robotsResult, sitemapResult, redditResult, ...jobPageResults] = await Promise.all([
+  const [robotsResult, sitemapResult, redditResult, careerSiteResult, ...jobPageResults] = await Promise.all([
     fetchText(`${baseUrl}/robots.txt`),
     fetchText(`${baseUrl}/sitemap.xml`),
     fetchRedditSignals(brand),
+    fetchHTML(careerSiteFetchUrl),
     ...urls.map(u => fetchHTML(u.trim()))
   ]);
 
@@ -571,6 +680,9 @@ app.post('/audit', async (req, res) => {
   const robotsAudit = auditRobotsTxt(robotsResult.text, baseUrl);
   const sitemapAudit = auditSitemap(sitemapResult.text);
   const d4Score = scoreD4Sentiment(redditResult);
+
+  const careerSiteText = careerSiteResult.success ? extractVisibleText(careerSiteResult.html) : null;
+  const d2CareerScore = careerSiteText ? scoreD2CareerSiteContent(careerSiteText) : null;
 
   const jobAudits = jobPageResults.map((result, i) => {
     if (!result.success) {
@@ -677,14 +789,27 @@ Apply these weights when calculating the composite score. Reference the tier in 
     ? `sitemap.xml: found. URLs: ${sitemapAudit.urlCount}. Includes job URLs: ${sitemapAudit.hasJobUrls}. Has lastmod dates: ${sitemapAudit.hasLastmod}.${sitemapAudit.issues.length > 0 ? ' Issues: ' + sitemapAudit.issues.join('; ') : ''}`
     : `sitemap.xml: not found or unreachable.`;
 
-  // D2 context: JD sub-protocol scores
+  // D2 context: JD sub-protocol (60%) + career site sub-protocol (40%) composite
   const d2ScoredPages = jobAudits.filter(j => j.fetchSuccess && j.d2Score);
-  const d2AvgScore = d2ScoredPages.length > 0
+  const d2JDAvgScore = d2ScoredPages.length > 0
     ? Math.round(d2ScoredPages.reduce((sum, j) => sum + j.d2Score.normalizedScore, 0) / d2ScoredPages.length)
     : null;
 
-  const d2Context = d2ScoredPages.length > 0
-    ? `D2 CONTENT READINESS — UTP JD SUB-PROTOCOL SCORES: ${d2ScoredPages.length} job page(s) scored.
+  // Composite: 60% JD sub-protocol + 40% career site sub-protocol
+  // Falls back gracefully if either source is unavailable
+  let d2CompositeScore = null;
+  if (d2JDAvgScore !== null && d2CareerScore !== null) {
+    d2CompositeScore = Math.round(d2JDAvgScore * 0.6 + d2CareerScore.normalizedScore * 0.4);
+  } else if (d2JDAvgScore !== null) {
+    d2CompositeScore = d2JDAvgScore;
+  } else if (d2CareerScore !== null) {
+    d2CompositeScore = d2CareerScore.normalizedScore;
+  }
+
+  const d2Context = (d2ScoredPages.length > 0 || d2CareerScore)
+    ? `D2 CONTENT READINESS — UTP SUB-PROTOCOL SCORES (JD 60% + Career Site 40%):
+
+${d2ScoredPages.length > 0 ? `JD SUB-PROTOCOL: ${d2ScoredPages.length} job page(s) scored.
 ${d2ScoredPages.map(j => {
   const s = j.d2Score;
   const sd = s.subDimensions;
@@ -704,12 +829,23 @@ ${d2ScoredPages.map(j => {
     5. Brand Voice & Authenticity: ${sd.brandVoiceAuthenticity?.score}/5 (jargon count: ${sd.brandVoiceAuthenticity?.jargonCount})
     6. Candidate Self-Assessment: ${sd.candidateSelfAssessment?.score}/5
   Word count: ${s.wordCount}`;
-}).join('\n')}
+}).join('\n')}` : `JD SUB-PROTOCOL: No job URLs provided or pages could not be fetched.`}
 
-The D2 score should be the average of these normalized scores: ${d2AvgScore}/100.
-Reference the UTP 7-step fix methodology in D2 recommendations when totalScore < 25.
+${d2CareerScore ? `CAREER SITE SUB-PROTOCOL: ${careerSiteFetchUrl}
+  Career Site Score: ${d2CareerScore.totalScore}/30 (${d2CareerScore.normalizedScore}/100) — ${d2CareerScore.interpretation}
+  Sub-dimension scores (each out of 5):
+    1. Company Info Completeness: ${d2CareerScore.subDimensions.companyInfoCompleteness?.score}/5 (${d2CareerScore.subDimensions.companyInfoCompleteness?.signalsFound}/10 signals)
+    2. Structural Clarity: ${d2CareerScore.subDimensions.structuralClarity?.score}/5 (${d2CareerScore.subDimensions.structuralClarity?.signalsFound}/7 sections)
+    3. Specificity & Quantification: ${d2CareerScore.subDimensions.specificityQuantification?.score}/5
+    4. EVP Clarity: ${d2CareerScore.subDimensions.evpClarity?.score}/5
+    5. Brand Voice & Authenticity: ${d2CareerScore.subDimensions.brandVoiceAuthenticity?.score}/5 (generic phrase count: ${d2CareerScore.subDimensions.brandVoiceAuthenticity?.genericPhraseCount})
+    6. Candidate Self-Assessment: ${d2CareerScore.subDimensions.candidateSelfAssessment?.score}/5` : `CAREER SITE SUB-PROTOCOL: Career site could not be fetched.`}
+
+D2 composite score (${d2JDAvgScore !== null && d2CareerScore ? '60% JD + 40% career site' : d2JDAvgScore !== null ? 'JD only — career site unavailable' : 'career site only — no JD URLs'}): ${d2CompositeScore}/100.
+Use ${d2CompositeScore} as the D2 score.
+Reference the UTP 7-step fix methodology in D2 recommendations when any JD totalScore < 25.
 Call out specific missing metadata fields and sections by name in D2 findings.`
-    : `D2 DATA: No job URLs provided or pages could not be fetched. Score D2 as inferred from domain/brand knowledge only.`;
+    : `D2 DATA: No job URLs and career site could not be fetched. Score D2 as inferred from domain/brand knowledge only.`;
 
 
   // ── D4 CONTEXT FOR CLAUDE ─────────────────────────────────────────────────
@@ -750,7 +886,17 @@ Set dataSource to "reddit+real" for D3 and "real" for D4.`;
 Set dataSource to "inferred" for both D3 and D4.`;
   }
 
- const d5Context = (selectedATS && selectedATS.length > 0)
+  // Append career site owned content for D4 continuity comparison
+  if (careerSiteText) {
+    const careerSnippet = careerSiteText.substring(0, 1500);
+    d4Context += `
+
+OWNED CONTENT SNAPSHOT (Career Site: ${careerSiteFetchUrl}):
+${careerSnippet}
+Use the above to compare owned career-site themes against earned Reddit signals for D4 continuity scoring. Describe any theme-level divergence descriptively, not prosecutorially.`;
+  }
+
+  const d5Context = (selectedATS && selectedATS.length > 0)
     ? `D5 ATS CONTEXT: The user has indicated they use the following ATS platform(s): ${selectedATS.join(', ')}.
 For the D5 dimension, provide specific, actionable optimization tips tailored to these platforms. Cover:
 - Any schema or structured data requirements specific to these ATSs
@@ -816,7 +962,7 @@ Return ONLY valid JSON
       "score": 0-100,
       "colorClass": "teal",
       "findings": ["1-sentence finding citing the lowest-scoring sub-dimension and top gap", "finding 2", "finding 3"],
-      "dataSource": "${d2ScoredPages.length > 0 ? 'real' : 'inferred'}",
+      "dataSource": "${(d2ScoredPages.length > 0 || d2CareerScore) ? 'real' : 'inferred'}",
       "perUrlScores": [{"url": "string", "score": 0-100, "topGaps": ["up to 3 missing fields or sub-dimensions"]}]
     },
     {

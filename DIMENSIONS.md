@@ -70,18 +70,26 @@ D2 — Content Readiness                              Weight: 15% T1 / 20% T2–
 ────────────────────────────────────────────────────────────────────────────────
 
 WHAT IT IS
-Is the content within job postings optimized for LLM understanding? D2 implements
-the UTP JD Audit & Fix Sub-Protocol — a 6-dimension evaluation of job description
-quality scored at the content level, not the schema/technical level.
+Is the content — both job descriptions and career site — optimized for LLM
+understanding? D2 implements TWO parallel UTP sub-protocols, blended into a
+composite score: 60% JD Sub-Protocol + 40% Career Site Sub-Protocol.
 
-Core question: "If an LLM can read this JD, will it understand and cite it well?"
+Core question: "If an LLM can read this content, will it understand and cite it well?"
 
-WHAT THE CODE DOES (scoreD2JDContent function)
+WHAT THE CODE DOES
+
+D2 COMPOSITE = 60% JD Sub-Protocol (scoreD2JDContent) + 40% Career Site Sub-Protocol (scoreD2CareerSiteContent).
+Falls back gracefully: if career site fetch fails, D2 = JD score only. If no JD URLs, D2 = career site score only.
+
+Both sub-protocols share the same structure: 6 sub-dimensions scored 1–5 each, max total = 30, normalized to 0–100.
+Score interpretation: 25–30 Excellent · 13–24 Improvement needed · <13 Rewrite required
+
+─────────────────────────────────────────────────────────
+SUB-PROTOCOL 1: JD AUDIT (scoreD2JDContent) — 60% weight
+─────────────────────────────────────────────────────────
 
 Scores each job URL against 6 sub-dimensions, each rated 1–5. Max total = 30.
-Normalized to 0–100 for the composite. Average across all provided URLs = D2 score.
-
-Score interpretation: 25–30 Excellent · 13–24 Improvement needed · <13 Rewrite required
+Average across all provided URLs = JD sub-protocol score.
 
 Sub-dimension 1: Metadata Clarity (1–5)
   Detects presence of the 10 UTP Visible Metadata Block fields:
@@ -116,10 +124,52 @@ Sub-dimension 6: Candidate Self-Assessment (1–5)
   fit indicators, transparent expectations, self-select language.
   Scoring: 4–5 signals = 5, 3 = 4, 2 = 3, 1 = 2, 0 = 1
 
+─────────────────────────────────────────────────────────────────
+SUB-PROTOCOL 2: CAREER SITE AUDIT (scoreD2CareerSiteContent) — 40% weight
+─────────────────────────────────────────────────────────────────
+
+Fetches the main career page (careerUrl from form, falls back to baseUrl) and
+scores it against 6 adapted sub-dimensions, each rated 1–5. Max total = 30.
+
+Sub-dimension 1: Company Info Completeness (1–5)
+  Detects 10 company info signals: mission statement, values, team size, office
+  locations, company history, culture description, benefits overview, leadership
+  mentioned, diversity commitment, funding/stage info.
+  Scoring: 8–10 = 5, 6–7 = 4, 4–5 = 3, 2–3 = 2, 0–1 = 1
+
+Sub-dimension 2: Structural Clarity (1–5)
+  Detects 7 section types: About, Culture, Benefits, Mission, Team, Values, Careers.
+  Scoring: 6–7 = 5, 4–5 = 4, 3 = 3, 1–2 = 2, 0 = 1
+
+Sub-dimension 3: Specificity & Quantification (1–5)
+  Detects: specific headcount numbers, office counts, benefit specifics (PTO days,
+  401k match %), growth metrics, customer counts, specific funding amounts.
+  Scoring: 5–6 = 5, 3–4 = 4, 2 = 3, 1 = 2, 0 = 1
+
+Sub-dimension 4: EVP Clarity — Employer Value Proposition (1–5)
+  Detects: "why work here" language, growth/learning, impact language, unique market
+  position claim, work-style clarity (remote/hybrid/async).
+  Scoring: 4–5 = 5, 3 = 4, 2 = 3, 1 = 2, 0 = 1
+
+Sub-dimension 5: Brand Voice & Authenticity (1–5)
+  Detects: low generic phrase count (<2), specific team stories, honest culture
+  descriptions, human narrative, zero generic phrases bonus.
+  Scoring: 4–5 = 5, 3 = 4, 2 = 3, 1 = 2, 0 = 1
+
+Sub-dimension 6: Candidate Self-Assessment Enablement (1–5)
+  Detects: "if you thrive" framing, clear stated values, conditions for success,
+  "not for everyone" language, explicit expectations/bar setting.
+  Scoring: 4–5 = 5, 3 = 4, 2 = 3, 1 = 2, 0 = 1
+
+D4 INTEGRATION
+The first 1,500 chars of career site text are appended to d4Context as an "owned
+content snapshot" so Claude can compare career-site themes against Reddit signals
+for continuity checking.
+
 HOW CLAUDE USES IT
 Claude receives per-URL sub-dimension scores with specific missing fields and
-sections named. The code-computed average normalized score is the D2 score.
-When totalScore < 25, Claude references the UTP 7-step fix methodology in
+sections named. The code-computed composite score is the D2 score.
+When any JD totalScore < 25, Claude references the UTP 7-step fix methodology in
 recommendations. Findings call out specific missing metadata fields and sections
 by name (not generic advice).
 
