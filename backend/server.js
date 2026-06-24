@@ -919,14 +919,15 @@ Set dataSource to "reddit+real" for D3 and "real" for D4.`;
 Set dataSource to "inferred" for both D3 and D4.`;
   }
 
-  // Append career site owned content for D4 continuity comparison
-  if (careerSiteText) {
-    const careerSnippet = careerSiteText.substring(0, 1500);
+  // Reference career site D2 scores in d4Context for continuity comparison.
+  // Raw career site text is not appended here — the D2 career site sub-dimension scores
+  // in d2Context already represent the owned content themes Claude needs for D4 analysis.
+  if (d2CareerScore) {
     d4Context += `
 
-OWNED CONTENT SNAPSHOT (Career Site: ${careerSiteFetchUrl}):
-${careerSnippet}
-Use the above to compare owned career-site themes against earned Reddit signals for D4 continuity scoring. Describe any theme-level divergence descriptively, not prosecutorially.`;
+OWNED CONTENT THEMES (from D2 Career Site Sub-Protocol scores for ${careerSiteFetchUrl}):
+Company Info: ${d2CareerScore.subDimensions.companyInfoCompleteness?.score}/5 | Structure: ${d2CareerScore.subDimensions.structuralClarity?.score}/5 | EVP Clarity: ${d2CareerScore.subDimensions.evpClarity?.score}/5 | Brand Voice: ${d2CareerScore.subDimensions.brandVoiceAuthenticity?.score}/5
+Use these owned content signals for theme-level D4 continuity comparison. Describe any divergence from Reddit earned signals descriptively, not prosecutorially.`;
   }
 
   const d5Context = (selectedATS && selectedATS.length > 0)
@@ -944,6 +945,7 @@ Reference each selected ATS by name in the D5 findings. Be specific — not gene
 You will receive REAL audit data collected from the client's actual career site, job posting URLs, and Reddit.
 
 Do not invent findings. Base every score and finding on the real data provided.
+OUTPUT DISCIPLINE: Keep each finding to one concise sentence. Keep recommendations tight — title + one sentence description. The JSON response must be complete; do not let it truncate.
 
 ${tierContext}
 
