@@ -198,6 +198,27 @@ async function fetchRedditSignals(brand) {
 // This score is passed to Claude as a suggested D4 score — Claude can adjust
 // based on the full context (brand size, industry, post quality, etc.)
 
+function calculateDataCompleteness(opts) {
+  // Each data source is one slot. Completeness = filled slots / total slots × 100.
+  // Job URLs each count as one slot; if none provided they are excluded from total.
+  const { robotsFound, sitemapFound, careerSiteSuccess, redditSuccess, jobResults } = opts;
+
+  const slots = [
+    { name: 'robots.txt',   filled: robotsFound },
+    { name: 'sitemap.xml',  filled: sitemapFound },
+    { name: 'career site',  filled: careerSiteSuccess },
+    { name: 'reddit',       filled: redditSuccess },
+    ...jobResults.map((r, i) => ({ name: `job-url-${i + 1}`, filled: r.success })),
+  ];
+
+  const total = slots.length;
+  const filled = slots.filter(s => s.filled).length;
+  const pct = Math.round((filled / total) * 100);
+  const scoreStatus = pct < 70 ? 'provisional' : 'final';
+
+  return { pct, scoreStatus, filled, total };
+}
+
 function scoreD4Sentiment(redditData) {
   // If Reddit fetch failed entirely, return null so Claude scores D4 as inferred
   if (!redditData || !redditData.success) return null;
@@ -824,6 +845,14 @@ app.post('/audit', async (req, res) => {
   const careerSiteBlocks = extractJSONLD(careerSiteResult.html || '');
   const d2CareerScore = careerSiteText ? scoreD2CareerSiteContent(careerSiteText) : null;
 
+  const dataCompleteness = calculateDataCompleteness({
+    robotsFound: robotsResult.success,
+    sitemapFound: sitemapResult.success,
+    careerSiteSuccess: careerSiteResult.success,
+    redditSuccess: redditResult.success,
+    jobResults: jobPageResults,
+  });
+
   const jobAudits = jobPageResults.map((result, i) => {
     if (!result.success) {
       return { url: urls[i], fetchSuccess: false, error: result.error || `HTTP ${result.status}`, schema: null, schemaAudit: null, contentPreview: null };
@@ -1077,6 +1106,8 @@ OUTPUT DISCIPLINE: Keep each finding to one concise sentence. Keep recommendatio
 
 ${tierContext}
 
+DATA COMPLETENESS: ${dataCompleteness.pct}% (${dataCompleteness.filled}/${dataCompleteness.total} data sources returned usable data). Score status: ${dataCompleteness.scoreStatus.toUpperCase()}.${dataCompleteness.scoreStatus === 'provisional' ? ' Note "Provisional Score" in your executive summary — data gaps limit confidence.' : ''}
+
 ${d1Context}
 
 ${d2Context}
@@ -1222,11 +1253,12 @@ ${JSON.stringify(realDataSummary, null, 2)}`;
         auditData: realDataSummary,
         requestBody: req.body,
         tierResult,
+        dataCompleteness,
       });
-      res.json({ success: true, report, auditData: realDataSummary, auditId });
+      res.json({ success: true, report, auditData: realDataSummary, auditId, dataCompleteness });
     } catch (dbErr) {
       console.error('DB persist error (audit still returned):', dbErr.message);
-      res.json({ success: true, report, auditData: realDataSummary, auditId: null });
+      res.json({ success: true, report, auditData: realDataSummary, auditId: null, dataCompleteness });
     }
 
   } catch (err) {
