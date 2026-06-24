@@ -8,8 +8,6 @@ const { classifyTier } = require('./tierClassifier');
 const app = express();
 const PORT = process.env.PORT || 8080;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 
 // The backend's own public URL — used to build the redirect URI
 const BACKEND_URL = process.env.BACKEND_URL || 'https://talentgeo-backend-360027703478.us-central1.run.app';
@@ -34,139 +32,6 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// ─── OAUTH: STEP 1 — REDIRECT USER TO GOOGLE ─────────────────────────────────
-
-app.get('/auth/google', (req, res) => {
-  const params = new URLSearchParams({
-    client_id: GOOGLE_CLIENT_ID,
-    redirect_uri: `${BACKEND_URL}/auth/callback`,
-    response_type: 'code',
-    scope: 'https://www.googleapis.com/auth/webmasters.readonly',
-    access_type: 'online',
-    prompt: 'select_account'
-  });
-  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
-});
-
-// ─── OAUTH: STEP 2 — HANDLE GOOGLE CALLBACK ──────────────────────────────────
-
-app.get('/auth/callback', async (req, res) => {
-  const { code, error } = req.query;
-
-  if (error || !code) {
-    return res.redirect(`${FRONTEND_URL}?gsc=error&reason=${error || 'no_code'}`);
-  }
-
-  try {
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code,
-        client_id: GOOGLE_CLIENT_ID,
-        client_secret: GOOGLE_CLIENT_SECRET,
-        redirect_uri: `${BACKEND_URL}/auth/callback`,
-        grant_type: 'authorization_code'
-      })
-    });
-
-    const tokenData = await tokenRes.json();
-
-    if (!tokenData.access_token) {
-      console.error('Token exchange failed:', tokenData);
-      return res.redirect(`${FRONTEND_URL}?gsc=error&reason=token_exchange_failed`);
-    }
-
-    res.redirect(`${FRONTEND_URL}?gsc=connected&token=${encodeURIComponent(tokenData.access_token)}`);
-
-  } catch (err) {
-    console.error('OAuth callback error:', err);
-    res.redirect(`${FRONTEND_URL}?gsc=error&reason=server_error`);
-  }
-});
-
-// ─── GSC DATA FETCHERS ────────────────────────────────────────────────────────
-
-async function fetchGSCSites(accessToken) {
-  try {
-    const res = await fetch('https://www.googleapis.com/webmasters/v3/sites', {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    if (!res.ok) return { success: false, status: res.status };
-    const data = await res.json();
-    return { success: true, sites: data.siteEntry || [] };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-}
-
-async function fetchGSCSearchAnalytics(accessToken, siteUrl, domain) {
-  try {
-    const endDate = new Date().toISOString().split('T')[0];
-    const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    const res = await fetch(
-      `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          startDate,
-          endDate,
-          dimensions: ['page'],
-          dimensionFilterGroups: [{
-            filters: [{
-              dimension: 'page',
-              operator: 'containsWord',
-              expression: 'job'
-            }]
-          }],
-          rowLimit: 25
-        })
-      }
-    );
-    if (!res.ok) return { success: false, status: res.status };
-    const data = await res.json();
-    return { success: true, rows: data.rows || [], totals: data.responseAggregationType };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-}
-
-async function fetchGSCIndexCoverage(accessToken, siteUrl) {
-  try {
-    const res = await fetch(
-      `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/urlInspection/index:inspect`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          inspectionUrl: siteUrl,
-          siteUrl
-        })
-      }
-    );
-    if (!res.ok) return { success: false, status: res.status };
-    const data = await res.json();
-    return { success: true, result: data.inspectionResult };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-}
-
-function matchSiteToDomain(sites, domain) {
-  const domainClean = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
-  return sites.find(s => {
-    const siteClean = s.siteUrl.replace(/^https?:\/\//, '').replace(/\/$/, '').replace(/^sc-domain:/, '');
-    return siteClean.includes(domainClean) || domainClean.includes(siteClean);
-  });
-}
 
 // ─── D4: REDDIT RSS FETCHER ───────────────────────────────────────────────────
 // Uses Reddit's public RSS feeds — no credentials, no API approval required.
@@ -684,7 +549,7 @@ app.post('/audit', async (req, res) => {
     return res.status(500).json({ error: 'API key not configured' });
   }
 
-  const { domain, brand, industry, context, jobUrls, gscToken, selectedATS, isOwnCompany, declaredTier } = req.body;
+  const { domain, brand, industry, context, jobUrls, selectedATS, isOwnCompany, declaredTier } = req.body;
 
   if (!domain || !brand) {
     return res.status(400).json({ error: 'domain and brand are required' });
@@ -702,61 +567,6 @@ app.post('/audit', async (req, res) => {
     fetchRedditSignals(brand),
     ...urls.map(u => fetchHTML(u.trim()))
   ]);
-
-  // ── GSC DATA COLLECTION (if token provided) ───────────────────────────────
-
-  let gscData = { connected: false };
-
-  if (gscToken) {
-    try {
-      const sitesResult = await fetchGSCSites(gscToken);
-
-      if (sitesResult.success && sitesResult.sites.length > 0) {
-        const matchedSite = matchSiteToDomain(sitesResult.sites, baseUrl);
-
-        if (matchedSite) {
-          const [analyticsResult, coverageResult] = await Promise.all([
-            fetchGSCSearchAnalytics(gscToken, matchedSite.siteUrl, baseUrl),
-            fetchGSCIndexCoverage(gscToken, matchedSite.siteUrl)
-          ]);
-
-          gscData = {
-            connected: true,
-            siteUrl: matchedSite.siteUrl,
-            permissionLevel: matchedSite.permissionLevel,
-            jobPageSearchAnalytics: analyticsResult.success ? {
-              rowCount: analyticsResult.rows.length,
-              topPages: analyticsResult.rows.slice(0, 10).map(r => ({
-                page: r.keys[0],
-                clicks: r.clicks,
-                impressions: r.impressions,
-                ctr: (r.ctr * 100).toFixed(2) + '%',
-                position: r.position.toFixed(1)
-              })),
-              totalClicks: analyticsResult.rows.reduce((sum, r) => sum + r.clicks, 0),
-              totalImpressions: analyticsResult.rows.reduce((sum, r) => sum + r.impressions, 0)
-            } : { error: 'Analytics unavailable', status: analyticsResult.status },
-            indexCoverage: coverageResult.success ? coverageResult.result : { error: 'Coverage data unavailable' }
-          };
-        } else {
-          gscData = {
-            connected: true,
-            matchedSite: false,
-            availableSites: sitesResult.sites.map(s => s.siteUrl),
-            note: `GSC account has ${sitesResult.sites.length} properties but none matched ${baseUrl}`
-          };
-        }
-      } else {
-        gscData = {
-          connected: true,
-          matchedSite: false,
-          note: sitesResult.success ? 'No GSC properties found in this account' : `GSC API error: ${sitesResult.status}`
-        };
-      }
-    } catch (e) {
-      gscData = { connected: true, error: e.message };
-    }
-  }
 
   // ── PARSE COLLECTED DATA ──────────────────────────────────────────────────
 
@@ -795,7 +605,6 @@ app.post('/audit', async (req, res) => {
     sitemap: sitemapAudit,
     jobPages: jobPagesForPrompt,
     urlsProvided: urls.length,
-    gsc: gscData,
     reddit: {
       fetched: redditResult.success,
       totalMentions: redditResult.totalMentions || 0,
@@ -904,13 +713,6 @@ Reference the UTP 7-step fix methodology in D2 recommendations when totalScore <
 Call out specific missing metadata fields and sections by name in D2 findings.`
     : `D2 DATA: No job URLs provided or pages could not be fetched. Score D2 as inferred from domain/brand knowledge only.`;
 
-  const gscContext = gscData.connected && gscData.siteUrl
-    ? `GSC DATA AVAILABLE: Real Google Search Console data has been pulled for ${gscData.siteUrl}.
-- Job pages found in GSC: ${(gscData.jobPageSearchAnalytics && gscData.jobPageSearchAnalytics.rowCount) || 0}
-- Total impressions (90 days): ${(gscData.jobPageSearchAnalytics && gscData.jobPageSearchAnalytics.totalImpressions) || 0}
-- Total clicks (90 days): ${(gscData.jobPageSearchAnalytics && gscData.jobPageSearchAnalytics.totalClicks) || 0}
-Use this data to give precise, accurate D1 and D2 scores. Reference specific impression/click numbers in findings.`
-    : `GSC DATA: Not connected. Score D1 and D2 based on schema and robots.txt/sitemap data only.`;
 
   // ── D4 CONTEXT FOR CLAUDE ─────────────────────────────────────────────────
 
@@ -962,13 +764,11 @@ Reference each selected ATS by name in the D5 findings. Be specific — not gene
     : `D5 CONTEXT: No ATS platform selected. Provide general distribution coverage advice for D5.`;
 
   const systemPrompt = `You are the Cassillon AI GEO Audit Engine.
-You will receive REAL audit data collected from the client's actual career site, job posting URLs, Google Search Console, and Reddit.
+You will receive REAL audit data collected from the client's actual career site, job posting URLs, and Reddit.
 
 Do not invent findings. Base every score and finding on the real data provided.
 
 ${tierContext}
-
-${gscContext}
 
 D1 CRAWLER ACCESS DATA (feeds D1 score alongside schema audit):
 ${d1RobotsContext}
@@ -1009,8 +809,8 @@ Return ONLY valid JSON
       "name": "Schema Integrity",
       "score": 0-100,
       "colorClass": "blue",
-      "findings": ["specific finding referencing schema audit, robots.txt, sitemap, and GSC data", "finding 2", "finding 3"],
-      "dataSource": "${gscData.connected && gscData.siteUrl ? 'gsc+real' : 'real'}"
+      "findings": ["specific finding referencing schema audit, robots.txt, and sitemap data", "finding 2", "finding 3"],
+      "dataSource": "real"
     },
     {
       "id": "D2",
@@ -1035,7 +835,7 @@ Return ONLY valid JSON
       "score": 0-100,
       "colorClass": "purple",
       "findings": ["descriptive theme-level continuity finding — not prosecutorial", "finding 2", "finding 3"],
-      "dataSource": "${redditResult.success ? 'reddit+real' : 'inferred'}"
+      "dataSource": "${redditResult.success ? 'real' : 'inferred'}"
     },
     {
       "id": "D5",

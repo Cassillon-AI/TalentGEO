@@ -54,20 +54,14 @@ Crawler access audit (fed into D1 alongside schema):
 Note: robots.txt and sitemap data were previously scored as D2 ("Career Site
 Hygiene"). Per UTP V2 spec they belong in D1 — moved in June 2026.
 
-IF GOOGLE SEARCH CONSOLE IS CONNECTED
-Real impression/click data (last 90 days) for job pages is added to D1 context.
-Claude uses this to add specific numbers (e.g. "0 impressions suggests Google
-for Jobs is not indexing these pages").
-
 HOW CLAUDE USES IT
-Claude receives schema audit results, robots.txt/sitemap audit, and GSC data,
-then writes the final D1 score and findings. Claude may adjust the score slightly
-based on overall context but must reference real data.
+Claude receives schema audit results and robots.txt/sitemap audit, then writes
+the final D1 score and findings. Claude may adjust the score slightly based on
+overall context but must reference real data.
 
 WHEN TO UPDATE THIS DOCUMENT
 - Required or recommended field lists change
 - robots.txt or sitemap check paths change
-- GSC data is added/removed from D1 context
 - Catastrophic failure conditions change
 
 

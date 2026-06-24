@@ -139,7 +139,6 @@ async function saveAudit({ companyId, report, auditData, requestBody, tierResult
           sitemap: auditData?.sitemapData ? true : false,
           reddit: auditData?.redditData?.success || false,
           jobPages: (auditData?.jobPageData?.length || 0),
-          gsc: auditData?.gscData?.connected || false,
         }),
       ]
     );

@@ -156,56 +156,6 @@
   .form-row textarea { resize: vertical; min-height: 80px; }
   .form-two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-  /* GSC SECTION */
-  .gsc-section {
-    background: var(--surface);
-    border: 1px solid var(--surface3);
-    border-radius: var(--radius);
-    padding: 16px 18px; margin-bottom: 20px;
-  }
-  .gsc-section.connected {
-    border-color: var(--teal);
-    background: var(--teal-lt);
-  }
-  .gsc-header { margin-bottom: 10px; }
-  .gsc-title-row {
-    display: flex; align-items: center; gap: 8px;
-  }
-  .gsc-icon { width: 20px; height: 20px; flex-shrink: 0; }
-  .gsc-icon svg { width: 100%; height: 100%; }
-  .gsc-title {
-    font-size: 12px; font-weight: 600;
-    letter-spacing: 0.06em; text-transform: uppercase;
-    color: var(--ink2);
-  }
-  .gsc-badge {
-    font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
-    text-transform: uppercase; padding: 2px 8px; border-radius: 10px;
-    background: var(--blue-lt); color: var(--blue);
-  }
-  .gsc-badge.connected {
-    background: var(--teal-lt); color: var(--teal);
-    border: 1px solid var(--teal);
-  }
-  .gsc-desc {
-    font-size: 12px; color: var(--ink3); line-height: 1.6; margin-bottom: 12px;
-  }
-  .btn-gsc {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 500; color: var(--ink);
-    border: 1px solid var(--surface3); border-radius: 8px;
-    padding: 8px 14px; text-decoration: none;
-    background: var(--surface); transition: border-color 0.15s;
-    cursor: pointer;
-  }
-  .btn-gsc:hover { border-color: var(--ink3); }
-  .btn-gsc-disconnect {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 12px; color: var(--teal); font-weight: 500;
-    background: none; border: none; cursor: pointer; padding: 4px 0;
-    text-decoration: underline;
-  }
-
   /* URL FIELDS SECTION */
   .url-section {
     background: var(--surface); border-radius: var(--radius);
@@ -462,7 +412,6 @@
   }
   .data-badge.real { background: var(--teal-lt); color: var(--teal); }
   .data-badge.inferred { background: var(--surface2); color: var(--ink3); }
-  .data-badge.gsc { background: var(--blue-lt); color: var(--blue); }
   .data-badge.reddit { background: #2a1008; color: #f87060; }
 
   /* ATS SELECTOR */
@@ -724,38 +673,11 @@
       <input type="text" id="input-hq" placeholder="e.g. San Francisco, CA" />
     </div>
 
-    <!-- GSC CONNECT -->
-    <div class="gsc-section" id="gsc-section">
-      <div class="gsc-header">
-        <div class="gsc-title-row">
-          <div class="gsc-icon">
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-          </div>
-          <div class="gsc-title">Google Search Console</div>
-          <div class="gsc-badge" id="gsc-badge">D1 · D2 Enhancement</div>
-        </div>
-      </div>
-      <div class="gsc-desc" id="gsc-desc">
-        Connect your GSC account to unlock real Google index data — actual crawl coverage, search impressions, and rich result status for your job postings.
-      </div>
-      <div id="gsc-action">
-        <a class="btn-gsc" id="btn-connect-gsc" href="#" onclick="connectGSC(event)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-          Connect Google Search Console
-        </a>
-      </div>
-    </div>
-
     <!-- JOB POSTING URLS -->
     <div class="url-section">
       <div class="url-section-header">
         <div class="url-section-title">Job Posting URLs</div>
-        <div class="url-section-badge">D1 · D3 Audit Corpus</div>
+        <div class="url-section-badge">D1 · D2 Audit Corpus</div>
       </div>
       <p>Provide up to three live job posting URLs for schema and content analysis. Include a mix of role types for the most accurate audit.</p>
       <div class="url-field">
@@ -969,22 +891,8 @@
 
   let selectedTier = 'report';
   let formData = {};
-  let gscToken = null;
   let selectedATS = [];
   let isOwnCompany = false;
-
-  // ─── GSC OAUTH ─────────────────────────────────────────────────────────────
-
-  function connectGSC(e) {
-    e.preventDefault();
-    saveFormState();
-    window.location.href = `${BACKEND_URL}/auth/google`;
-  }
-
-  function disconnectGSC() {
-    gscToken = null;
-    renderGSCState(false);
-  }
 
   function toggleATS(el) {
     el.classList.toggle('selected');
@@ -1010,32 +918,7 @@
     });
   });
 
-  function renderGSCState(connected) {
-    const section = document.getElementById('gsc-section');
-    const badge = document.getElementById('gsc-badge');
-    const desc = document.getElementById('gsc-desc');
-    const action = document.getElementById('gsc-action');
-
-    if (connected) {
-      section.classList.add('connected');
-      badge.textContent = 'Connected';
-      badge.classList.add('connected');
-      desc.textContent = 'GSC connected — your audit will include real Google index data for D1 and D2.';
-      action.innerHTML = `<button class="btn-gsc-disconnect" onclick="disconnectGSC()">✓ Connected · Disconnect</button>`;
-    } else {
-      section.classList.remove('connected');
-      badge.textContent = 'D1 · D2 Enhancement';
-      badge.classList.remove('connected');
-      desc.textContent = 'Connect your GSC account to unlock real Google index data — actual crawl coverage, search impressions, and rich result status for your job postings.';
-      action.innerHTML = `
-        <a class="btn-gsc" id="btn-connect-gsc" href="#" onclick="connectGSC(event)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-          Connect Google Search Console
-        </a>`;
-    }
-  }
-
-  // ─── FORM STATE PERSISTENCE (survives OAuth redirect) ─────────────────────
+  // ─── FORM STATE PERSISTENCE ───────────────────────────────────────────────
 
   function saveFormState() {
     const state = {
@@ -1078,26 +961,6 @@
       if (s.declaredTier) document.getElementById('input-declared-tier').value = s.declaredTier;
       sessionStorage.removeItem('tgeo_form');
     } catch(e) { /* ignore */ }
-  }
-
-  // ─── READ URL PARAMS ON LOAD ───────────────────────────────────────────────
-
-  function handleOAuthReturn() {
-    const params = new URLSearchParams(window.location.search);
-    const gscStatus = params.get('gsc');
-    const token = params.get('token');
-
-    if (gscStatus === 'connected' && token) {
-      gscToken = decodeURIComponent(token);
-      renderGSCState(true);
-      restoreFormState();
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (gscStatus === 'error') {
-      restoreFormState();
-      const reason = params.get('reason') || 'unknown';
-      showError(`Google Search Console connection failed (${reason}). You can still run the audit without GSC data.`);
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
   }
 
   // ─── OWN COMPANY TOGGLE ───────────────────────────────────────────────────
@@ -1161,15 +1024,10 @@
       context,
       tier: selectedTier,
       jobUrls,
-      gscConnected: !!gscToken
     };
 
-    if (gscToken) {
-      document.getElementById('step-1-desc').textContent = 'Reading robots.txt, sitemap.xml + Google Search Console index data';
-    }
-
     document.getElementById('loading-domain-label').innerHTML =
-      `Analyzing <strong>${brand}</strong>${jobUrls.length > 0 ? ` · ${jobUrls.length} job URL${jobUrls.length > 1 ? 's' : ''}` : ''}${gscToken ? ' · GSC Connected' : ''}`;
+      `Analyzing <strong>${brand}</strong>${jobUrls.length > 0 ? ` · ${jobUrls.length} job URL${jobUrls.length > 1 ? 's' : ''}` : ''}`;
 
     show('screen-loading');
     runAuditFlow();
@@ -1221,7 +1079,6 @@
           industry: formData.industry,
           context: formData.context,
           jobUrls: formData.jobUrls,
-          gscToken: gscToken || null,
           selectedATS: selectedATS,
           isOwnCompany: isOwnCompany,
           declaredTier: document.getElementById('input-declared-tier').value || null
@@ -1291,7 +1148,6 @@
 
   function dataBadge(source) {
     if (!source || source === 'inferred') return '<span class="data-badge inferred">◌ Inferred — No Live Data</span>';
-    if (source === 'gsc+real') return '<span class="data-badge gsc">● GSC + Live</span>';
     if (source === 'reddit+real') return '<span class="data-badge reddit">● Reddit Live</span>';
     if (source === 'ats+tips') return '<span class="data-badge real">● ATS Tips</span>';
     return '<span class="data-badge real">● Live Data</span>';
@@ -1299,9 +1155,8 @@
 
   function renderReport(d) {
     document.getElementById('report-title').textContent = `${formData.brand} — GEO Audit`;
-    const gscNote = gscToken ? ' · GSC Connected' : '';
     document.getElementById('report-meta').textContent =
-      `Generated ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})} · ${formData.tier === 'consult' ? 'Report + Consulting' : 'Report Only'} Tier${gscNote}`;
+      `Generated ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})} · ${formData.tier === 'consult' ? 'Report + Consulting' : 'Report Only'} Tier`;
     document.getElementById('report-score').textContent = d.overallScore;
     setTimeout(() => { document.getElementById('score-bar').style.width = d.overallScore + '%'; }, 300);
     document.getElementById('score-grade').textContent = `${d.scoreGrade} GEO Visibility · Cassillon Protocol`;
@@ -1464,9 +1319,7 @@
     };
   }
 
-  // ─── INIT ──────────────────────────────────────────────────────────────────
 
-  handleOAuthReturn();
 </script>
 </body>
 </html>
