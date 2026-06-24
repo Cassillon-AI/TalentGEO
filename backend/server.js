@@ -335,6 +335,9 @@ function auditJobPostingSchema(schema) {
   return { present: true, fields, score, gaps, schemaType: schema['@type'] };
 }
 
+// LLM crawler user-agent strings to check for explicit blocks in robots.txt
+const LLM_BOT_AGENTS = ['gptbot', 'claude-web', 'claudebot', 'anthropic-ai', 'perplexitybot', 'cohere-ai'];
+
 function auditRobotsTxt(text, domain) {
   if (!text) return { found: false, issues: ['robots.txt not found or unreachable'] };
 
@@ -343,6 +346,7 @@ function auditRobotsTxt(text, domain) {
   let currentAgent = null;
   let blocksAll = false;
   let blocksJobs = false;
+  const llmBotsBlocked = [];
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -355,11 +359,16 @@ function auditRobotsTxt(text, domain) {
         if (path === '/' || path === '/*') blocksAll = true;
         if (path.includes('/jobs') || path.includes('/careers') || path.includes('/apply')) blocksJobs = true;
       }
+      // Detect LLM-specific crawler blocks
+      if (LLM_BOT_AGENTS.includes(currentAgent) && (path === '/' || path === '/*')) {
+        if (!llmBotsBlocked.includes(currentAgent)) llmBotsBlocked.push(currentAgent);
+      }
     }
   }
 
   if (blocksAll) issues.push('robots.txt Disallow: / blocks all crawlers from the entire site');
   if (blocksJobs) issues.push('robots.txt blocks /jobs or /careers paths from crawlers');
+  if (llmBotsBlocked.length > 0) issues.push(`robots.txt explicitly blocks LLM crawlers: ${llmBotsBlocked.join(', ')}`);
   if (!text.toLowerCase().includes('sitemap')) issues.push('No Sitemap directive found in robots.txt');
 
   return {
@@ -367,6 +376,7 @@ function auditRobotsTxt(text, domain) {
     hasSitemapDirective: text.toLowerCase().includes('sitemap'),
     blocksAll,
     blocksJobs,
+    llmBotsBlocked,
     issues,
     snippet: text.substring(0, 500)
   };
@@ -636,6 +646,16 @@ function scoreD2CareerSiteContent(text) {
   };
 }
 
+// Returns UTP time-weight label for a Reddit post based on its age
+function getPostTimeWeight(publishedAt) {
+  if (!publishedAt) return '<6 months (100% weight)';
+  const ageDays = (Date.now() - new Date(publishedAt).getTime()) / 86400000;
+  if (ageDays > 730) return '>24 months — EXCLUDED per UTP time-weighting';
+  if (ageDays > 365) return '12–24 months (50% weight)';
+  if (ageDays > 180) return '6–12 months (75% weight)';
+  return '<6 months (100% weight)';
+}
+
 function normalizeDomain(domain) {
   let d = domain.trim();
   if (!d.startsWith('http')) d = 'https://' + d;
@@ -863,8 +883,8 @@ Reddit mentions found: ${redditResult.totalMentions}
 Subreddits: ${redditResult.subredditsFound.join(', ') || 'none identified'}
 Sentiment breakdown: ${positive} positive, ${negative} negative, ${neutral} neutral/mixed
 
-Top posts (by Reddit score):
-${redditResult.posts.map(p => `- [${p.sentiment.toUpperCase()}] "${p.title}" (r/${p.subreddit}, score: ${p.score}, comments: ${p.numComments})`).join('\n')}
+Top posts (by Reddit score) with UTP time-weights:
+${redditResult.posts.map(p => `- [${p.sentiment.toUpperCase()}] "${p.title}" (r/${p.subreddit}, score: ${p.score}, ${getPostTimeWeight(p.publishedAt)})`).join('\n')}
 
 Key signals:
 ${redditResult.topSignals.map(s => {
@@ -877,14 +897,22 @@ ${redditResult.topSignals.map(s => {
 Suggested D3 (Brand Signal Assessment) score based on Reddit signals: ${d4Score ? d4Score.suggestedScore : 'N/A'}/100
 You may adjust up or down based on industry norms, brand size, and recency.
 For D4 (Continuity Indicator): use Reddit sentiment vs. career site owned content as a theme-level continuity signal. Describe any divergence descriptively, not prosecutorially.
+UTP time-weighting for D4: posts labeled ">24 months — EXCLUDED" should not contribute to continuity scoring. Posts labeled "6–12 months" carry 75% weight; "12–24 months" carry 50% weight. Weight older signals accordingly.
 Set dataSource to "reddit+real" for D3 and "real" for D4.
 Reference specific post titles or subreddits in D3 findings.`;
 
   } else if (redditResult.success && redditResult.totalMentions === 0) {
-    d4Context = `D3 + D4 REDDIT DATA: Reddit searched successfully — no mentions of "${brand}" found.
+    if (tierResult?.tier === 1) {
+      d4Context = `D3 + D4 REDDIT DATA: Reddit searched successfully — no mentions of "${brand}" found.
+This is a T1 Startup. Absence of downstream Reddit signal is expected at this stage.
+D3: score at neutral baseline 45/100. D4: score as 50 (neutral) and note in findings that downstream signal is absent — this is expected for an early-stage company and should NOT be penalized. Reference the absence as context, not a gap.
+Set dataSource to "reddit+real" for D3 and "real" for D4.`;
+    } else {
+      d4Context = `D3 + D4 REDDIT DATA: Reddit searched successfully — no mentions of "${brand}" found.
 Brand may be small, niche, or not publicly discussed.
 Suggested D3 score: 45/100 (neutral baseline). D4: note absence of downstream signal; do not heavily penalize.
 Set dataSource to "reddit+real" for D3 and "real" for D4.`;
+    }
 
   } else {
     d4Context = `D3 + D4 DATA: Reddit fetch failed (${redditResult.error || 'unknown error'}). Score D3 and D4 as inferred from brand/domain knowledge only.
